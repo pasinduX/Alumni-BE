@@ -1,0 +1,180 @@
+// Prisma schema for Alumni-BE
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ------------------
+// Users & Auth
+// ------------------
+model User {
+  id             String                  @id @default(uuid())
+  email          String                  @unique
+  passwordHash   String
+  emailVerified  Boolean                 @default(false)
+  createdAt      DateTime                @default(now())
+
+  profile        Profile?
+  emailTokens    EmailToken[]
+  passwordTokens PasswordResetToken[]
+  apiKeys        ApiKey[]
+}
+
+model EmailToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+}
+
+// ------------------
+// Profile (3NF)
+// ------------------
+model Profile {
+  id                 String             @id @default(uuid())
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String             @unique
+  fullName           String?
+  biography          String?
+  linkedinUrl        String?
+  profileImagePath   String?
+  createdAt          DateTime           @default(now())
+
+  degrees            Degree[]
+  certifications     Certification[]
+  licences           Licence[]
+  professionalCourses ProfessionalCourse[]
+  employmentHistory  EmploymentHistory[]
+  bids               Bid[]
+  monthlyAppearances MonthlyAppearance[]
+  wonSlots           BidSlot[]          @relation("WinningProfile")
+}
+
+model Degree {
+  id             String   @id @default(uuid())
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId      String
+  title          String
+  institution    String?
+  url            String?
+  completionDate DateTime?
+}
+
+model Certification {
+  id             String   @id @default(uuid())
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId      String
+  title          String
+  issuingBody    String?
+  url            String?
+  completionDate DateTime?
+  isSponsored    Boolean  @default(false)
+  sponsorOffer   Decimal?
+}
+
+model Licence {
+  id             String   @id @default(uuid())
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId      String
+  title          String
+  awardingBody   String?
+  url            String?
+  completionDate DateTime?
+}
+
+model ProfessionalCourse {
+  id             String   @id @default(uuid())
+  profile        Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId      String
+  title          String
+  provider       String?
+  url            String?
+  completionDate DateTime?
+}
+
+model EmploymentHistory {
+  id          String   @id @default(uuid())
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId   String
+  company     String
+  role        String?
+  startDate   DateTime
+  endDate     DateTime?
+}
+
+// ------------------
+// Bidding
+// ------------------
+model BidSlot {
+  id              String   @id @default(uuid())
+  slotDate        DateTime @unique
+  winnerProfile   Profile? @relation("WinningProfile", fields: [winnerProfileId], references: [id])
+  winnerProfileId String?
+  winningAmount   Decimal?
+  selectionTime   DateTime?
+
+  bids            Bid[]
+}
+
+model Bid {
+  id         String   @id @default(uuid())
+  profile    Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId  String
+  slot       BidSlot  @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  slotId     String
+  amount     Decimal
+  placedAt   DateTime @default(now())
+  isWinning  Boolean  @default(false)
+
+  @@unique([profileId, slotId])
+}
+
+model MonthlyAppearance {
+  id              String   @id @default(uuid())
+  profile         Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId       String
+  monthYear       String
+  appearanceCount Int      @default(0)
+  attendedEvent   Boolean  @default(false)
+
+  @@unique([profileId, monthYear])
+}
+
+// ------------------
+// API Keys
+// ------------------
+model ApiKey {
+  id        String        @id @default(uuid())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  keyHash   String        @unique
+  name      String?
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  usage     ApiKeyUsage[]
+}
+
+model ApiKeyUsage {
+  id        String   @id @default(uuid())
+  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  apiKeyId  String
+  endpoint  String
+  accessedAt DateTime @default(now())
+}
