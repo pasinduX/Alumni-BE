@@ -7,7 +7,6 @@ exports.startBidScheduler = startBidScheduler;
 const node_cron_1 = __importDefault(require("node-cron"));
 const bidService_1 = require("../services/bidService");
 function startBidScheduler() {
-    // Run at midnight server time to select the winner for the next day
     node_cron_1.default.schedule("0 0 * * *", async () => {
         try {
             const slotDate = (0, bidService_1.getSlotDateForTomorrow)();

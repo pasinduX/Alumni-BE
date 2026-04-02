@@ -34,8 +34,6 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importStar(require("./app"));
-const bidScheduler_1 = require("./cron/bidScheduler");
 (0, app_1.startServer)();
-(0, bidScheduler_1.startBidScheduler)();
 exports.default = app_1.default;
 //# sourceMappingURL=index.js.map

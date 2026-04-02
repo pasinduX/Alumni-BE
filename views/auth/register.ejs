@@ -1,0 +1,43 @@
+<h1>Register</h1>
+<form id="registerForm">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+  <div class="mb-3">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" class="form-control" id="email" name="email" required />
+  </div>
+  <div class="mb-3">
+    <label for="password" class="form-label">Password</label>
+    <input type="password" class="form-control" id="password" name="password" required />
+  </div>
+  <div class="mb-3">
+    <label for="confirmPassword" class="form-label">Confirm Password</label>
+    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required />
+  </div>
+  <button type="submit" class="btn btn-primary">Register</button>
+</form>
+<script>
+const form = document.getElementById('registerForm');
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const data = {
+    email: form.email.value,
+    password: form.password.value,
+    confirmPassword: form.confirmPassword.value,
+  };
+
+  const res = await fetch('/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+
+  if (res.ok) {
+    alert('Verification email sent. Please verify and then login.');
+    window.location.href = '/web/login';
+  } else {
+    const body = await res.json();
+    const msg = body.errors ? JSON.stringify(body.errors) : body.error || 'Registration failed';
+    alert(msg);
+  }
+});
+</script>

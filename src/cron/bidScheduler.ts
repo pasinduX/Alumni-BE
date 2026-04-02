@@ -2,7 +2,6 @@ import cron from "node-cron";
 import { processSlot, getSlotDateForTomorrow } from "../services/bidService";
 
 export function startBidScheduler() {
-  // Run at midnight server time to select the winner for the next day
   cron.schedule("0 0 * * *", async () => {
     try {
       const slotDate = getSlotDateForTomorrow();

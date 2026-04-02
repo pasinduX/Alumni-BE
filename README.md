@@ -1,6 +1,6 @@
-# Alumni Spotlight Backend (Node.js + Express)
+# AR Alumni Influencer Platform (Node.js + Express)
 
-Backend API for the Alumni Spotlight bidding system ("Featured Alumni of the Day").
+Backend API for the AR Alumni Influencer Platform, including authentication, profile management, blind bidding, API key access, and scheduled daily winner selection.
 
 ## ✅ Features
 - User registration + JWT login
@@ -38,13 +38,22 @@ Backend API for the Alumni Spotlight bidding system ("Featured Alumni of the Day
    ```
 
 ## 🧠 Architecture Notes
-- **Cron** runs at 00:00 daily and selects the winning bid for the next day.
-- **Blind bidding**: Users can see only `winning` vs `losing` status, never amounts.
-- **Monthly limit**: By default, users can win up to 3 times per month; attending an event grants +1.
+- **Cron** runs at 18:00 UTC daily and selects the winning bid for tomorrow.
+- **Blind bidding**: Users can see only `winning` vs `losing` status, never the full highest amount.
+- **Monthly limit**: Maximum 3 wins monthly, 4 with attended_event_this_month true.
+
+## 🛠️ Setup
+1. `npm install`
+2. Copy `.env.example` to `.env` and fill values.
+3. Run DB migration:
+   - `psql -f migrations/001_initial.sql $DATABASE_URL`
+4. Start server:
+   - `npm run dev`
 
 ## 📚 API Docs
-Browse the Swagger UI at: `http://localhost:4000/docs`
+Browse Swagger UI at: `http://localhost:4000/api-docs`
 
----
+## 🧩 Notes
+- No frontend included; API-only.
+- Generate migrations with `psql` using `migrations/001_initial.sql`.
 
-_This project uses Prisma v7, Express, and TypeScript._

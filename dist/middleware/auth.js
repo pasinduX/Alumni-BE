@@ -1,24 +1,19 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.requireAuth = requireAuth;
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const config_1 = require("../config");
-function requireAuth(req, res, next) {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
-    if (!token) {
-        return res.status(401).json({ error: "Authorization required" });
+exports.requireLogin = requireLogin;
+exports.requireAdmin = requireAdmin;
+function requireLogin(req, res, next) {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Unauthorized" });
     }
-    try {
-        const payload = jsonwebtoken_1.default.verify(token, config_1.config.jwtSecret);
-        req.userId = payload.userId;
-        return next();
+    req.userId = req.session.userId;
+    req.userRole = req.session.role;
+    next();
+}
+function requireAdmin(req, res, next) {
+    if (!req.session || req.session.role !== "admin") {
+        return res.status(403).json({ error: "Forbidden" });
     }
-    catch (err) {
-        return res.status(401).json({ error: "Invalid or expired token" });
-    }
+    next();
 }
 //# sourceMappingURL=auth.js.map

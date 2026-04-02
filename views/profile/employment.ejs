@@ -1,0 +1,22 @@
+<h1>Employment History</h1>
+<table class="table">
+  <thead><tr><th>Company</th><th>Role</th><th>Start</th><th>End</th><th>Current</th><th>Action</th></tr></thead>
+  <tbody>
+    <% (profile.employment_history||[]).forEach((d)=>{ %>
+      <tr>
+        <td><%= d.company %></td><td><%= d.role %></td><td><%= d.start_date || '' %></td><td><%= d.end_date || '' %></td><td><%= d.is_current ? 'Yes' : 'No' %></td>
+        <td><form method="post" action="/web/profile/employment/<%= d.id %>/delete" style="display:inline"><button type="submit" class="btn btn-sm btn-danger">Delete</button></form></td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+<hr />
+<h3>Add Employment</h3>
+<form method="post" action="/web/profile/employment">
+  <div class="mb-3"><input required name="company" placeholder="Company" class="form-control" /></div>
+  <div class="mb-3"><input required name="role" placeholder="Role" class="form-control" /></div>
+  <div class="mb-3"><input type="date" required name="start_date" class="form-control" /></div>
+  <div class="mb-3"><input type="date" name="end_date" class="form-control" /></div>
+  <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="is_current" name="is_current" value="true" /><label class="form-check-label" for="is_current">Currently Employed</label></div>
+  <button class="btn btn-primary">Add</button>
+</form>

@@ -1,0 +1,25 @@
+<h1>Professional Courses</h1>
+<table class="table">
+  <thead><tr><th>Title</th><th>Provider</th><th>URL</th><th>Completed At</th><th>Action</th></tr></thead>
+  <tbody>
+    <% (profile.professional_courses||[]).forEach((d)=>{ %>
+      <tr>
+        <td><%= d.title %></td><td><%= d.provider %></td><td><a href="<%= d.url %>"><%= d.url %></a></td><td><%= d.completed_at || '' %></td>
+        <td>
+          <form method="post" action="/web/profile/courses/<%= d.id %>/delete" style="display:inline">
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+    <% }) %>
+  </tbody>
+</table>
+<hr />
+<h3>Add Course</h3>
+<form method="post" action="/web/profile/courses">
+  <div class="mb-3"><input required name="title" placeholder="Title" class="form-control" /></div>
+  <div class="mb-3"><input name="provider" placeholder="Provider" class="form-control" /></div>
+  <div class="mb-3"><input type="url" name="url" placeholder="URL" class="form-control" /></div>
+  <div class="mb-3"><input type="date" name="completed_at" class="form-control" /></div>
+  <button class="btn btn-primary">Add</button>
+</form>
