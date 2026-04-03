@@ -54,12 +54,12 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
 
     const r = await query("SELECT id, token_expires_at FROM users WHERE email_verification_token = $1", [token]);
     if (r.rowCount === 0) {
-      return res.status(404).json({ error: "Invalid token" });
+      return res.redirect('/web/login?verified=0&error=invalid_token');
     }
 
     const row = r.rows[0];
     if (new Date(row.token_expires_at) < new Date()) {
-      return res.status(400).json({ error: "Token expired" });
+      return res.redirect('/web/login?verified=0&error=token_expired');
     }
 
     await query(
@@ -67,7 +67,7 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
       [row.id],
     );
 
-    return res.status(200).json({ message: "Email verified" });
+    return res.redirect('/web/login?verified=1');
   } catch (err) {
     next(err);
   }
@@ -90,6 +90,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     const session = req.session as any;
     session.userId = user.id;
     session.role = user.role;
+    session.email = email;
     return res.status(200).json({ message: "Logged in" });
   } catch (err) {
     next(err);

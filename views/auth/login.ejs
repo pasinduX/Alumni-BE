@@ -1,36 +1,129 @@
-<h1>Login</h1>
-<form id="loginForm" method="post" action="/auth/login">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-  <div class="mb-3">
-    <label for="email" class="form-label">Email</label>
-    <input type="email" class="form-control" id="email" name="email" required />
-  </div>
-  <div class="mb-3">
-    <label for="password" class="form-label">Password</label>
-    <input type="password" class="form-control" id="password" name="password" required />
-  </div>
-  <button type="submit" class="btn btn-primary">Login</button>
-</form>
-<script>
-const form = document.getElementById('loginForm');
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const data = {
-    email: form.email.value,
-    password: form.password.value,
-  };
+<%- /* login.ejs */ %>
 
-  const res = await fetch('/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+<div class="auth-bg">
+  <div class="auth-panel">
+
+    <div class="auth-header">
+      <div class="auth-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h1>Welcome back</h1>
+      <p>Sign in to your alumni account</p>
+    </div>
+
+    <div class="auth-card">
+      <% if (messages && messages.success) { %>
+        <div class="alert alert-success" style="display:flex;">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+          <span><%= messages.success %></span>
+        </div>
+      <% } %>
+      <% if (messages && messages.error) { %>
+        <div class="alert alert-danger" style="display:flex;">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span><%= messages.error %></span>
+        </div>
+      <% } %>
+      <div id="loginAlert" class="alert alert-danger" style="display:none;">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="loginAlertMsg"></span>
+      </div>
+
+      <form id="loginForm" method="POST" action="/auth/login" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email address</label>
+          <input class="form-control" type="email" id="email" name="email" placeholder="you@eastminster.ac.uk" autocomplete="email" required />
+          <div class="field-error" id="err-email"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">
+            Password
+            <a href="/web/forgot-password" style="float:right;font-size:12px;color:var(--gold-dark);text-decoration:none;font-weight:500;">Forgot password?</a>
+          </label>
+          <div style="position:relative">
+            <input class="form-control" type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required style="padding-right:42px" />
+            <button type="button" id="togglePwd" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--ink-light);padding:0;" tabindex="-1">
+              <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="field-error" id="err-password"></div>
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-full" id="loginBtn" style="margin-top:0.5rem">
+          <span class="btn-spinner" id="loginSpinner"></span>
+          <span class="btn-label">Sign in</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="auth-footer">Don't have an account? <a href="/web/register">Join the network</a></p>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Toggle password visibility
+  document.getElementById('togglePwd').addEventListener('click', function() {
+    const inp = document.getElementById('password');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
   });
 
-  if (res.ok) {
-    window.location.href = '/web/profile';
-  } else {
-    const body = await res.json();
-    alert(body.error || 'Login failed');
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.className = 'field-error visible'; }
+    const inp = document.getElementById(id.replace('err-',''));
+    if (inp) inp.classList.add('error');
   }
-});
+  function clearErrors() {
+    document.querySelectorAll('.field-error').forEach(e => { e.textContent=''; e.className='field-error'; });
+    document.querySelectorAll('.form-control').forEach(e => e.classList.remove('error'));
+    document.getElementById('loginAlert').style.display = 'none';
+  }
+  function showAlert(msg) {
+    const box = document.getElementById('loginAlert');
+    document.getElementById('loginAlertMsg').textContent = msg;
+    box.style.display = 'flex';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearErrors();
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('[name=_csrf]').value },
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        }),
+      });
+
+      if (res.ok) {
+        window.location.href = '/web/profile';
+        return;
+      }
+
+      const data = await res.json();
+      if (data.errors) {
+        Object.entries(data.errors).forEach(([k, v]) => showError('err-' + k, v));
+      } else {
+        showAlert(data.error || 'Invalid credentials. Please try again.');
+      }
+    } catch (err) {
+      showAlert('Network error — please try again.');
+    }
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  });
+})();
 </script>

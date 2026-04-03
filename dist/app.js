@@ -49,9 +49,12 @@ app.use((0, connect_flash_1.default)());
 app.use("/uploads", express_1.default.static(path_1.default.join(__dirname, "..", "uploads")));
 app.use((req, res, next) => {
     const session = req.session;
-    res.locals.user = session?.userId ? { userId: session.userId, role: session.role } : null;
+    res.locals.user = session?.userId
+        ? { userId: session.userId, role: session.role, email: session.email || null }
+        : null;
     res.locals.messages = req.flash ? req.flash() : {};
     res.locals.csrfToken = req.csrfToken ? req.csrfToken() : "";
+    res.locals.currentPath = req.originalUrl.split('?')[0];
     next();
 });
 app.get("/health", (_req, res) => res.json({ status: "ok" }));

@@ -8,6 +8,9 @@ export interface SessionRequest extends Request {
 
 export function requireLogin(req: SessionRequest, res: Response, next: NextFunction) {
   if (!req.session || !req.session.userId) {
+    if (req.originalUrl.startsWith("/web")) {
+      return res.redirect("/web/login");
+    }
     return res.status(401).json({ error: "Unauthorized" });
   }
   req.userId = req.session.userId;

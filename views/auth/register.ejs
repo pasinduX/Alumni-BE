@@ -1,43 +1,129 @@
-<h1>Register</h1>
-<form id="registerForm">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-  <div class="mb-3">
-    <label for="email" class="form-label">Email</label>
-    <input type="email" class="form-control" id="email" name="email" required />
-  </div>
-  <div class="mb-3">
-    <label for="password" class="form-label">Password</label>
-    <input type="password" class="form-control" id="password" name="password" required />
-  </div>
-  <div class="mb-3">
-    <label for="confirmPassword" class="form-label">Confirm Password</label>
-    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required />
-  </div>
-  <button type="submit" class="btn btn-primary">Register</button>
-</form>
-<script>
-const form = document.getElementById('registerForm');
-form.addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const data = {
-    email: form.email.value,
-    password: form.password.value,
-    confirmPassword: form.confirmPassword.value,
-  };
+<%- /* register.ejs */ %>
 
-  const res = await fetch('/auth/register', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
+<div class="auth-bg">
+  <div class="auth-panel">
+
+    <div class="auth-header">
+      <div class="auth-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+      </div>
+      <h1>Join the network</h1>
+      <p>Create your alumni account</p>
+    </div>
+
+    <div class="auth-card">
+      <div id="regAlert" class="alert alert-danger" style="display:none;">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="regAlertMsg"></span>
+      </div>
+      <div id="regSuccess" class="alert alert-success" style="display:none;">
+        <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span>Verification email sent! Check your inbox, then <a href="/web/login" style="color:var(--success);font-weight:600;">sign in</a>.</span>
+      </div>
+
+      <form id="registerForm" method="POST" action="/auth/register" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <div class="form-group">
+          <label class="form-label" for="email">Institutional email <span class="required">*</span></label>
+          <input class="form-control" type="email" id="email" name="email" placeholder="you@eastminster.ac.uk" autocomplete="email" required />
+          <div class="field-error" id="err-email"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password <span class="required">*</span></label>
+          <input class="form-control" type="password" id="password" name="password" placeholder="Min 8 chars, uppercase, number, symbol" autocomplete="new-password" required />
+          <div id="strengthBar" style="margin-top:6px;height:3px;border-radius:2px;background:var(--cream-mid);overflow:hidden;"><div id="strengthFill" style="height:100%;width:0;transition:width 0.3s,background 0.3s;"></div></div>
+          <div class="field-error" id="err-password"></div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirmPassword">Confirm password <span class="required">*</span></label>
+          <input class="form-control" type="password" id="confirmPassword" name="confirmPassword" placeholder="••••••••" autocomplete="new-password" required />
+          <div class="field-error" id="err-confirmPassword"></div>
+        </div>
+
+        <button type="submit" class="btn btn-gold btn-full" id="regBtn" style="margin-top:0.5rem">
+          <span class="btn-spinner"></span>
+          <span class="btn-label">Create account</span>
+        </button>
+      </form>
+    </div>
+
+    <p class="auth-footer">Already a member? <a href="/web/login">Sign in</a></p>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Password strength meter
+  document.getElementById('password').addEventListener('input', function() {
+    const v = this.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v)) score++;
+    const fill = document.getElementById('strengthFill');
+    const colors = ['#BE3333','#E07B2C','#C9A84C','#1A6B42'];
+    fill.style.width = (score * 25) + '%';
+    fill.style.background = colors[score - 1] || 'transparent';
   });
 
-  if (res.ok) {
-    alert('Verification email sent. Please verify and then login.');
-    window.location.href = '/web/login';
-  } else {
-    const body = await res.json();
-    const msg = body.errors ? JSON.stringify(body.errors) : body.error || 'Registration failed';
-    alert(msg);
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.className = 'field-error visible'; }
+    const inp = document.getElementById(id.replace('err-',''));
+    if (inp) inp.classList.add('error');
   }
-});
+  function clearErrors() {
+    document.querySelectorAll('.field-error').forEach(e => { e.textContent=''; e.className='field-error'; });
+    document.querySelectorAll('.form-control').forEach(e => e.classList.remove('error'));
+    document.getElementById('regAlert').style.display = 'none';
+  }
+  function showAlert(msg) {
+    const box = document.getElementById('regAlert');
+    document.getElementById('regAlertMsg').textContent = msg;
+    box.style.display = 'flex';
+  }
+
+  document.getElementById('registerForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearErrors();
+    const btn = document.getElementById('regBtn');
+    btn.disabled = true;
+    btn.classList.add('loading');
+
+    try {
+      const res = await fetch('/auth/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': document.querySelector('[name=_csrf]').value },
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+          confirmPassword: document.getElementById('confirmPassword').value,
+        }),
+      });
+
+      if (res.ok) {
+        document.getElementById('registerForm').style.display = 'none';
+        document.getElementById('regSuccess').style.display = 'flex';
+        return;
+      }
+
+      const data = await res.json();
+      if (data.errors) {
+        Object.entries(data.errors).forEach(([k, v]) => showError('err-' + k, v));
+      } else {
+        showAlert(data.error || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      showAlert('Network error — please try again.');
+    }
+
+    btn.disabled = false;
+    btn.classList.remove('loading');
+  });
+})();
 </script>

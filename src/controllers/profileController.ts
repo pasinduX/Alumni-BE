@@ -41,21 +41,37 @@ export async function getProfile(req: SessionRequest, res: Response, next: NextF
   }
 }
 
+function sanitizeSectionData(data: any) {
+  const sanitized = { ...data };
+  ["start_date", "end_date", "completed_at"].forEach((dateKey) => {
+    if (sanitized[dateKey] === "" || sanitized[dateKey] === null || sanitized[dateKey] === undefined) {
+      delete sanitized[dateKey];
+    }
+  });
+  delete sanitized._csrf;
+  delete sanitized.submit;
+  return sanitized;
+}
+
 export async function updateProfile(req: SessionRequest, res: Response, next: NextFunction) {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-    const { full_name, bio, linkedin_url } = req.body;
+    let { full_name, bio, linkedin_url, phone_number } = req.body;
+
+    if (linkedin_url && !/^https?:\/\//i.test(linkedin_url)) {
+      linkedin_url = `https://${linkedin_url}`;
+    }
 
     const r = await query(
-      "UPDATE alumni_profiles SET full_name = $1, bio = $2, linkedin_url = $3, updated_at = NOW() WHERE user_id = $4 RETURNING *",
-      [full_name, bio, linkedin_url, userId],
+      "UPDATE alumni_profiles SET full_name = $1, bio = $2, linkedin_url = $3, phone_number = $4, updated_at = NOW() WHERE user_id = $5 RETURNING *",
+      [full_name, bio, linkedin_url, phone_number, userId],
     );
 
     if (r.rowCount === 0) {
       await query(
-        "INSERT INTO alumni_profiles (user_id, full_name, bio, linkedin_url) VALUES ($1,$2,$3,$4)",
-        [userId, full_name, bio, linkedin_url],
+        "INSERT INTO alumni_profiles (user_id, full_name, bio, linkedin_url, phone_number) VALUES ($1,$2,$3,$4,$5)",
+        [userId, full_name, bio, linkedin_url, phone_number],
       );
       return res.json({ message: "Profile created" });
     }
@@ -142,7 +158,8 @@ export async function createSectionEntry(req: SessionRequest, res: Response, nex
       return res.status(400).json({ error: "Invalid section" });
     }
 
-    const data = req.body;
+    const data = sanitizeSectionData(req.body);
+
     if (data.url && !/^https?:\/\//.test(data.url)) {
       return res.status(400).json({ error: "URL must be valid" });
     }
@@ -166,7 +183,8 @@ export async function updateSectionEntry(req: SessionRequest, res: Response, nex
       return res.status(400).json({ error: "Invalid section" });
     }
 
-    const data = req.body;
+    const data = sanitizeSectionData(req.body);
+
     if (data.url && !/^https?:\/\//.test(data.url)) {
       return res.status(400).json({ error: "URL must be valid" });
     }

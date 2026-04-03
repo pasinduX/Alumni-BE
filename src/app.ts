@@ -24,7 +24,20 @@ app.set("views", path.join(__dirname, "..", "views"));
 app.use(layouts);
 app.set("layout", "layout");
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+        fontSrc: ["'self'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'"],
+      },
+    },
+  }),
+);
 app.use(
   cors({
     origin: config.allowedOrigins,
@@ -38,11 +51,26 @@ app.use(session({
   saveUninitialized: false,
   cookie: { httpOnly: true, secure: process.env.NODE_ENV === "production" },
 }));
-app.use(csurf({ cookie: true }));
+
 app.use(globalLimiter);
 app.use(requestLogger);
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
+
+// csurf: enable for most paths, but allow swagger testing and the login endpoint
+// to support Swagger "Try it out" without a browser-generated token.
+app.use((req, res, next) => {
+  if (process.env.NODE_ENV !== "production") {
+    if (req.path.startsWith("/api-docs")) {
+      return next();
+    }
+    if (req.path === "/auth/login" && req.get("x-no-csrf") === "1") {
+      return next();
+    }
+  }
+  return csurf({ cookie: true })(req, res, next);
+});
+
 app.use(morgan("tiny"));
 app.use(flash());
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
@@ -50,9 +78,14 @@ app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 app.use((req, res, next) => {
   const session = req.session as any;
-  res.locals.user = session?.userId ? { userId: session.userId, role: session.role } : null;
+  res.locals.user = session?.userId
+    ? { userId: session.userId, role: session.role, email: session.email || null }
+    : null;
   res.locals.messages = (req as any).flash ? (req as any).flash() : {};
+  const fieldErrors = (req as any).flash ? (req as any).flash("fieldErrors") : [];
+  res.locals.fieldErrors = fieldErrors.length ? JSON.parse(fieldErrors[0]) : {};
   res.locals.csrfToken = (req as any).csrfToken ? (req as any).csrfToken() : "";
+  res.locals.currentPath = req.originalUrl.split('?')[0];
   next();
 });
 
@@ -61,8 +94,33 @@ app.use("/web", webRouter);
 app.use("/", apiRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const safeFlash = typeof (req as any).flash === "function" ? (req as any).flash.bind(req) : () => {};
+
+  if (err && err.code === "EBADCSRFTOKEN") {
+    console.warn("CSRF token missing/invalid for", req.originalUrl);
+    if (req.originalUrl.startsWith("/web")) {
+      safeFlash("error", "Invalid CSRF token. Please refresh and retry.");
+      return res.redirect("/web/login");
+    }
+    return res.status(403).json({ error: "Invalid CSRF token" });
+  }
+
+  if (err && err.code === "22P02") {
+    // PostgreSQL invalid_text_representation (invalid date for example)
+    console.warn("Invalid input syntax error", err.message);
+    if (req.originalUrl.startsWith("/web")) {
+      safeFlash("error", "Invalid date value. Please use YYYY-MM-DD or leave blank.");
+      return res.redirect(req.originalUrl.startsWith("/web/") ? req.originalUrl : "/web/profile");
+    }
+    return res.status(400).json({ error: "Invalid input value" });
+  }
+
   console.error(err);
+  if (req.originalUrl.startsWith("/web")) {
+    safeFlash("error", "Unexpected server error. Please try again.");
+    return res.redirect("/web/login");
+  }
   res.status(err.status || 500).json({ error: err.message ?? "Internal server error" });
 });
 

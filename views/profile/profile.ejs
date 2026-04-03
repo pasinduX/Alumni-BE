@@ -1,0 +1,262 @@
+<%- /* profile.ejs */ %>
+
+<%
+  const initials = (profile.full_name || '?')
+    .split(' ')
+    .map(w => w[0])
+    .slice(0, 2)
+    .join('').toUpperCase();
+  const imageSrc = profile.profile_image_url
+    ? `${profile.profile_image_url}${profile.profile_image_url.includes('?') ? '&' : '?'}t=${Date.now()}`
+    : null;
+%>
+
+<div class="page-header">
+  <div class="page-header-text">
+    <h1>My Profile</h1>
+    <p>Manage your public alumni profile</p>
+  </div>
+  <span class="badge badge-gold">Alumni</span>
+</div>
+
+<!-- Profile hero -->
+<div class="card" style="background: linear-gradient(135deg, var(--ink) 0%, #2A231D 100%); border: none; color: white; position:relative; overflow:hidden;">
+  <div style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;border-radius:50%;background:rgba(201,168,76,0.07);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-50px;right:40px;width:120px;height:120px;border-radius:50%;background:rgba(201,168,76,0.05);pointer-events:none;"></div>
+  <div class="profile-hero">
+    <div class="profile-avatar-wrap">
+      <% if (profile.profile_image_url) { %>
+        <img class="profile-avatar" src="<%= imageSrc %>" alt="Profile photo" />
+      <% } else { %>
+        <div class="profile-avatar-placeholder" style="background:linear-gradient(135deg,rgba(201,168,76,0.25) 0%,rgba(201,168,76,0.1) 100%);"><%= initials %></div>
+      <% } %>
+    </div>
+    <div class="profile-info" style="flex:1;">
+      <h2 style="color:white;"><%= profile.full_name || 'Your Name' %></h2>
+      <% if (profile.phone_number) { %>
+        <p style="color:var(--gold-light); font-size:13px; margin:4px 0 0;">
+          📞 <a href="tel:<%= profile.phone_number %>" style="color:var(--gold-light); text-decoration:underline;"><%= profile.phone_number %></a>
+        </p>
+      <% } %>
+      <% if (profile.linkedin_url) {
+           const linkedinUrl = profile.linkedin_url.toString().startsWith('http') ?
+             profile.linkedin_url : `https://${profile.linkedin_url}`;
+         %>
+        <a href="<%= linkedinUrl %>" target="_blank" rel="noopener" style="font-size:12.5px;color:var(--gold-mid);text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:4px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+          LinkedIn Profile
+        </a>
+      <% } %>
+      <% if (profile.bio) { %>
+        <p class="profile-bio" style="color:rgba(255,255,255,0.6);margin-top:8px;"><%= profile.bio.substring(0, 100) + (profile.bio.length > 100 ? '…' : '') %></p>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Contact details table -->
+<div class="card">
+  <p class="card-title">Contact details</p>
+  <div style="overflow-x:auto; margin-top:8px;">
+    <table class="profile-details-table" style="width:100%; border-collapse: collapse;">
+      <tr style="background: var(--cream-mid);">
+        <th style="padding: 10px; text-align: left; border: 1px solid var(--border);">Field</th>
+        <th style="padding: 10px; text-align: left; border: 1px solid var(--border);">Value</th>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid var(--border);">Full name</td>
+        <td style="padding: 10px; border: 1px solid var(--border);"><%= profile.full_name || '—' %></td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid var(--border);">LinkedIn</td>
+        <td style="padding: 10px; border: 1px solid var(--border);"><%- profile.linkedin_url ? `<a href='${profile.linkedin_url}' target='_blank' rel='noopener'>${profile.linkedin_url}</a>` : '—' %></td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid var(--border);">Phone</td>
+        <td style="padding: 10px; border: 1px solid var(--border);"><%= profile.phone_number || '—' %></td>
+      </tr>
+      <tr>
+        <td style="padding: 10px; border: 1px solid var(--border);">Bio</td>
+        <td style="padding: 10px; border: 1px solid var(--border);"><%= profile.bio ? profile.bio : '—' %></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- Edit details -->
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+    Personal details
+  </p>
+  <form method="post" action="/web/profile" id="profileForm">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="full_name">Full name <span class="required">*</span></label>
+        <input class="form-control<%= (fieldErrors && fieldErrors.full_name) ? ' error' : '' %>" type="text" id="full_name" name="full_name" value="<%= profile.full_name || '' %>" required />
+        <% if (fieldErrors && fieldErrors.full_name) { %><div class="field-error visible"><%= fieldErrors.full_name %></div><% } %>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="linkedin_url">LinkedIn URL</label>
+        <input class="form-control<%= (fieldErrors && fieldErrors.linkedin_url) ? ' error' : '' %>" type="text" id="linkedin_url" name="linkedin_url" value="<%= profile.linkedin_url || '' %>" placeholder="https://www.linkedin.com/in/yourname" />
+        <% if (fieldErrors && fieldErrors.linkedin_url) { %><div class="field-error visible"><%= fieldErrors.linkedin_url %></div><% } %>
+        <p class="form-hint">Full URL preferred — /in/ path required, https:// optional.</p>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="phone_number">Phone number</label>
+        <input class="form-control<%= (fieldErrors && fieldErrors.phone_number) ? ' error' : '' %>" type="tel" inputmode="tel" id="phone_number" name="phone_number" value="<%= profile.phone_number || '' %>" placeholder="+44 7123 456 789" pattern="^(\+44\s?7\d{3}|07\d{3})\s?\d{3}\s?\d{3}$" oninput="this.value=this.value.replace(/[^\d\s\-\+]/g,'')" />
+        <% if (fieldErrors && fieldErrors.phone_number) { %><div class="field-error visible"><%= fieldErrors.phone_number %></div><% } %>
+        <p class="form-hint">UK format required. +44 7XXX XXX XXX or 07XXX XXX XXX.</p>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="bio">Bio</label>
+      <textarea class="form-control" id="bio" name="bio" rows="3" placeholder="Write a short bio about yourself…"><%= profile.bio || '' %></textarea>
+    </div>
+    <button type="submit" class="btn btn-gold">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      Save changes
+    </button>
+  </form>
+</div>
+
+<!-- Photo upload -->
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    Profile photo
+  </p>
+  <form method="post" action="/profile/image" enctype="multipart/form-data" id="imageForm">
+    <input type="hidden" name="_csrf" id="csrfToken" value="<%= csrfToken %>" />
+    <div class="form-group">
+      <label class="upload-area" for="imageUpload" id="uploadLabel">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5" style="display:block;margin:0 auto 8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="upload-area-title">Click to upload a photo</div>
+        <div style="font-size:12px;color:var(--ink-light);">PNG or JPEG, max 2 MB</div>
+        <input id="imageUpload" type="file" name="image" accept="image/png,image/jpeg" required style="display:none" />
+      </label>
+      <div id="fileName" style="font-size:12.5px;color:var(--gold-dark);margin-top:8px;display:none;"></div>
+    </div>
+    <button type="submit" class="btn btn-outline">Upload photo</button>
+  </form>
+</div>
+<script>
+  const imageForm = document.getElementById("imageForm");
+  const imageUpload = document.getElementById("imageUpload");
+  const csrfToken = document.getElementById("csrfToken")?.value;
+
+  imageForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    if (!imageUpload.files.length) {
+      alert("Please select an image to upload.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("image", imageUpload.files[0]);
+
+    try {
+      const response = await fetch("/profile/image", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "x-csrf-token": csrfToken,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const msg = data?.error || "Image upload failed. Please try again.";
+        alert(msg);
+        return;
+      }
+
+      window.location.href = "/web/profile";
+    } catch (err) {
+      console.error(err);
+      alert("Network error while uploading image. Please retry.");
+    }
+  });
+
+  imageUpload.addEventListener("change", function() {
+    const fn = document.getElementById("fileName");
+    if (this.files[0]) {
+      fn.textContent = "✓ " + this.files[0].name;
+      fn.style.display = "block";
+      document.getElementById("uploadLabel").style.borderColor = "var(--gold)";
+      document.getElementById("uploadLabel").style.background = "var(--gold-light)";
+    }
+  });
+</script>
+
+<!-- Quick links -->
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Credentials & history
+  </p>
+  <div class="quick-links">
+    <a class="quick-link" href="/web/profile/degrees">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+      <span class="quick-link-count"><%= (profile.degrees || []).length %></span>
+      Degrees
+    </a>
+    <a class="quick-link" href="/web/profile/certifications">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="m9 12 2 2 4-4"/><path d="M9.7 17 9 22l3-2 3 2-.7-5"/></svg>
+      <span class="quick-link-count"><%= (profile.certifications || []).length %></span>
+      Certifications
+    </a>
+    <a class="quick-link" href="/web/profile/licences">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
+      <span class="quick-link-count"><%= (profile.licences || []).length %></span>
+      Licences
+    </a>
+    <a class="quick-link" href="/web/profile/courses">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span class="quick-link-count"><%= (profile.professional_courses || []).length %></span>
+      Courses
+    </a>
+    <a class="quick-link" href="/web/profile/employment">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>
+      <span class="quick-link-count"><%= (profile.employment_history || []).length %></span>
+      Employment
+    </a>
+  </div>
+</div>
+
+<script>
+(function() {
+  const phoneInput = document.getElementById('phone_number');
+  if (phoneInput) {
+    phoneInput.setAttribute('inputmode', 'tel');
+
+    phoneInput.addEventListener('keypress', (event) => {
+      const allowed = /[0-9+\-\s]/;
+      if (!allowed.test(event.key) && event.key !== 'Backspace' && event.key !== 'Delete') {
+        event.preventDefault();
+      }
+    });
+
+    phoneInput.addEventListener('input', (event) => {
+      const val = event.target.value;
+      const sanitized = val.replace(/[^0-9+\-\s]/g, '');
+      if (sanitized !== val) {
+        event.target.value = sanitized;
+      }
+    });
+  }
+
+  document.getElementById('imageUpload').addEventListener('change', function() {
+    const fn = document.getElementById('fileName');
+    if (this.files[0]) {
+      fn.textContent = '✓ ' + this.files[0].name;
+      fn.style.display = 'block';
+      document.getElementById('uploadLabel').style.borderColor = 'var(--gold)';
+      document.getElementById('uploadLabel').style.background = 'var(--gold-light)';
+    }
+  });
+})();
+</script>

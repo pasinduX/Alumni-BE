@@ -1,25 +1,179 @@
-<h1>Licences</h1>
-<table class="table">
-  <thead><tr><th>Title</th><th>Awarding Body</th><th>URL</th><th>Completed At</th><th>Action</th></tr></thead>
-  <tbody>
-    <% (profile.licences||[]).forEach((d)=>{ %>
-      <tr>
-        <td><%= d.title %></td><td><%= d.awarding_body %></td><td><a href="<%= d.url %>"><%= d.url %></a></td><td><%= d.completed_at || '' %></td>
-        <td>
-          <form method="post" action="/web/profile/licences/<%= d.id %>/delete" style="display:inline">
-            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-          </form>
-        </td>
-      </tr>
-    <% }) %>
-  </tbody>
-</table>
-<hr />
-<h3>Add Licence</h3>
-<form method="post" action="/web/profile/licences">
-  <div class="mb-3"><input required name="title" placeholder="Title" class="form-control" /></div>
-  <div class="mb-3"><input name="awarding_body" placeholder="Awarding Body" class="form-control" /></div>
-  <div class="mb-3"><input type="url" name="url" placeholder="URL" class="form-control" /></div>
-  <div class="mb-3"><input type="date" name="completed_at" class="form-control" /></div>
-  <button class="btn btn-primary">Add</button>
-</form>
+<%- /* licences.ejs */ %>
+<%
+  function fmtDate(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toISOString().split('T')[0];
+  }
+%>
+
+<div class="page-header">
+  <div class="page-header-text">
+    <h1>Licences</h1>
+    <p>Your professional licences</p>
+  </div>
+</div>
+
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
+    Licences
+  </p>
+  <% if ((profile.licences || []).length === 0) { %>
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h6"/></svg>
+      </div>
+      <p>No licences added yet — add one below.</p>
+    </div>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
+      <tr><th>Title</th><th>Awarding body</th><th>Completed</th><th>URL</th><th></th></tr>
+    </thead>
+    <tbody>
+      <% (profile.licences || []).forEach(function(d) { %>
+        <tr data-profile-licence='<%- JSON.stringify(d) %>'>
+          <td><%= d.title %></td>
+          <td style="color:var(--ink-mid);font-weight:400"><%= d.awarding_body || '—' %></td>
+          <td><%= fmtDate(d.completed_at) %></td>
+          <td><% if (d.url) { %><a class="table-link" href="<%= d.url %>" target="_blank" rel="noopener">View ↗</a><% } else { %>—<% } %></td>
+          <td style="display:flex;gap:8px;justify-content:flex-end;">
+            <button type="button" class="btn btn-outline btn-sm edit-licence-btn" data-id="<%= d.id %>">Edit</button>
+            <form method="post" action="/web/profile/licences/<%= d.id %>/delete" style="display:inline" onsubmit="return confirm('Remove this licence?')">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add licence
+  </p>
+  <form method="post" action="/web/profile/licences">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Licence title <span class="required">*</span></label>
+        <input class="form-control" name="title" placeholder="Chartered Engineer" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Awarding body</label>
+        <input class="form-control" name="awarding_body" placeholder="Engineering Council" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Certificate URL</label>
+        <input class="form-control" type="url" name="url" placeholder="https://…" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Completed date</label>
+        <input class="form-control" type="date" name="completed_at" />
+      </div>
+    </div>
+    <button type="submit" class="btn btn-gold">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add licence
+    </button>
+  </form>
+</div>
+
+<script>
+(function() {
+  const csrfToken = '<%= csrfToken %>';
+  let activeEditRow;
+
+  function fmtDate(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toISOString().split('T')[0];
+  }
+
+  function closeEditRow() {
+    if (!activeEditRow) return;
+    activeEditRow.originalRow.style.display = '';
+    activeEditRow.formRow.remove();
+    activeEditRow = null;
+  }
+
+  function buildEditRow(entry) {
+    const formRow = document.createElement('tr');
+    formRow.className = 'edit-row';
+    formRow.innerHTML = `
+      <td colspan="5">
+        <form class="licence-edit-form" data-id="${entry.id}">
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; align-items: center;">
+            <input name="title" placeholder="Licence title" required value="${entry.title || ''}" />
+            <input name="awarding_body" placeholder="Awarding body" value="${entry.awarding_body || ''}" />
+            <input type="date" name="completed_at" value="${fmtDate(entry.completed_at)}" />
+            <input type="url" name="url" placeholder="URL" value="${entry.url || ''}" />
+          </div>
+          <div style="margin-top:10px; display:flex; gap:8px; justify-content:flex-end;">
+            <button type="button" class="btn btn-outline btn-sm cancel-edit">Cancel</button>
+            <button type="submit" class="btn btn-gold btn-sm">Save</button>
+          </div>
+        </form>
+      </td>
+    `;
+    return formRow;
+  }
+
+  document.querySelectorAll('.edit-licence-btn').forEach(btn => {
+    btn.addEventListener('click', (event) => {
+      closeEditRow();
+      const row = event.target.closest('tr');
+      if (!row) return;
+      const entry = JSON.parse(row.getAttribute('data-profile-licence') || '{}');
+      const formRow = buildEditRow(entry);
+      row.style.display = 'none';
+      row.parentNode.insertBefore(formRow, row.nextSibling);
+      activeEditRow = { originalRow: row, formRow };
+
+      formRow.querySelector('.cancel-edit').addEventListener('click', closeEditRow);
+
+      formRow.querySelector('.licence-edit-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const id = form.getAttribute('data-id');
+        const data = {
+          title: form.title.value.trim(),
+          awarding_body: form.awarding_body.value.trim() || null,
+          completed_at: form.completed_at.value || null,
+          url: form.url.value.trim() || null,
+        };
+
+        try {
+          const res = await fetch(`/profile/licences/${id}`, {
+            method: 'PUT',
+            credentials: 'same-origin',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-csrf-token': csrfToken,
+            },
+            body: JSON.stringify(data),
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            alert(err.error || 'Unable to update licence, try again.');
+            return;
+          }
+
+          window.location.reload();
+        } catch (err) {
+          console.error(err);
+          alert('Network error while updating');
+        }
+      });
+    });
+  });
+})();
+</script>

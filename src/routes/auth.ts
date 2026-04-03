@@ -13,6 +13,39 @@ import { handleValidationErrors } from "../middleware/validate";
 
 const router = Router();
 
+// Support GET endpoints for browser-based navigation fallback
+router.get("/login", (_req, res) => res.redirect("/web/login"));
+router.get("/register", (_req, res) => res.redirect("/web/register"));
+router.get("/forgot-password", (_req, res) => res.redirect("/web/forgot-password"));
+
+/**
+ * @openapi
+ * /auth/csrf-token:
+ *   get:
+ *     summary: Get current CSRF token (for API clients)
+ *     responses:
+ *       200:
+ *         description: CSRF token returned
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 csrfToken:
+ *                   type: string
+ */
+router.get("/csrf-token", (req, res) => {
+  try {
+    const token = (req as any).csrfToken && (req as any).csrfToken();
+    if (!token) {
+      return res.status(500).json({ error: "CSRF token generation failed" });
+    }
+    return res.json({ csrfToken: token });
+  } catch (err) {
+    return res.status(500).json({ error: "CSRF token generation failed" });
+  }
+});
+
 /**
  * @openapi
  * /auth/register:
@@ -55,8 +88,63 @@ router.post(
   register,
 );
 
+/**
+ * @openapi
+ * /auth/verify-email:
+ *   get:
+ *     summary: Verify user email with token
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       302:
+ *         description: Redirect to login with message
+ *       400:
+ *         description: Token required or expired
+ *       404:
+ *         description: Invalid token
+ */
 router.get("/verify-email", verifyEmail);
 
+/**
+ * @openapi
+ * /auth/login:
+ *   post:
+ *     summary: Authenticate user
+ *     parameters:
+ *       - in: header
+ *         name: x-csrf-token
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: CSRF token, required for non-dev mode
+ *       - in: header
+ *         name: x-no-csrf
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Optional dev bypass header set to 1 for Swagger/Postman
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Logged in
+ *       401:
+ *         description: Invalid credentials
+ */
 router.post(
   "/login",
   authLimiter,
@@ -66,8 +154,36 @@ router.post(
   login,
 );
 
+/**
+ * @openapi
+ * /auth/logout:
+ *   post:
+ *     summary: Log out current user
+ *     responses:
+ *       200:
+ *         description: Logged out
+ */
 router.post("/logout", logout);
 
+/**
+ * @openapi
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Request password reset link
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email]
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Reset instructions sent
+ */
 router.post(
   "/forgot-password",
   authLimiter,
@@ -76,6 +192,29 @@ router.post(
   forgotPassword,
 );
 
+/**
+ * @openapi
+ * /auth/reset-password:
+ *   post:
+ *     summary: Reset password using token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [token, newPassword]
+ *             properties:
+ *               token:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Token invalid/expired
+ */
 router.post(
   "/reset-password",
   authLimiter,

@@ -74,6 +74,7 @@ async function login(req, res, next) {
         const session = req.session;
         session.userId = user.id;
         session.role = user.role;
+        session.email = email;
         return res.status(200).json({ message: "Logged in" });
     }
     catch (err) {

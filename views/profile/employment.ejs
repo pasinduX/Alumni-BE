@@ -1,22 +1,108 @@
-<h1>Employment History</h1>
-<table class="table">
-  <thead><tr><th>Company</th><th>Role</th><th>Start</th><th>End</th><th>Current</th><th>Action</th></tr></thead>
-  <tbody>
-    <% (profile.employment_history||[]).forEach((d)=>{ %>
+<%- /* employment.ejs */ %>
+<%
+  function fmtDate(value) {
+    if (!value) return '—';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return value;
+    return d.toISOString().split('T')[0];
+  }
+%>
+
+<div class="page-header">
+  <div class="page-header-text">
+    <h1>Employment History</h1>
+    <p>Your career and work experience</p>
+  </div>
+</div>
+
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>
+    Work history
+  </p>
+  <% if ((profile.employment_history || []).length === 0) { %>
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>
+      </div>
+      <p>No employment records yet — add your first role below.</p>
+    </div>
+  <% } else { %>
+  <table class="data-table">
+    <thead>
       <tr>
-        <td><%= d.company %></td><td><%= d.role %></td><td><%= d.start_date || '' %></td><td><%= d.end_date || '' %></td><td><%= d.is_current ? 'Yes' : 'No' %></td>
-        <td><form method="post" action="/web/profile/employment/<%= d.id %>/delete" style="display:inline"><button type="submit" class="btn btn-sm btn-danger">Delete</button></form></td>
+        <th>Company</th>
+        <th>Role</th>
+        <th>Start</th>
+        <th>End</th>
+        <th>Status</th>
+        <th></th>
       </tr>
-    <% }) %>
-  </tbody>
-</table>
-<hr />
-<h3>Add Employment</h3>
-<form method="post" action="/web/profile/employment">
-  <div class="mb-3"><input required name="company" placeholder="Company" class="form-control" /></div>
-  <div class="mb-3"><input required name="role" placeholder="Role" class="form-control" /></div>
-  <div class="mb-3"><input type="date" required name="start_date" class="form-control" /></div>
-  <div class="mb-3"><input type="date" name="end_date" class="form-control" /></div>
-  <div class="form-check mb-3"><input class="form-check-input" type="checkbox" id="is_current" name="is_current" value="true" /><label class="form-check-label" for="is_current">Currently Employed</label></div>
-  <button class="btn btn-primary">Add</button>
-</form>
+    </thead>
+    <tbody>
+      <% (profile.employment_history || []).forEach(function(d) { %>
+        <tr>
+          <td><%= d.company %></td>
+          <td style="color:var(--ink-mid);font-weight:400"><%= d.role %></td>
+          <td><%= d.start_date || '—' %></td>
+          <td><%= d.end_date || '—' %></td>
+          <td>
+            <% if (d.is_current) { %>
+              <span class="badge badge-green">Current</span>
+            <% } else { %>
+              <span style="font-size:12px;color:var(--ink-light);">Past</span>
+            <% } %>
+          </td>
+          <td>
+            <form method="post" action="/web/profile/employment/<%= d.id %>/delete" style="display:inline" onsubmit="return confirm('Remove this employment record?')">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+              <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Add employment
+  </p>
+  <form method="post" action="/web/profile/employment">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Company <span class="required">*</span></label>
+        <input class="form-control<%= (fieldErrors && fieldErrors.company) ? ' error' : '' %>" name="company" placeholder="Acme Corp" required />
+        <% if (fieldErrors && fieldErrors.company) { %><div class="field-error visible"><%= fieldErrors.company %></div><% } %>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Role / Title <span class="required">*</span></label>
+        <input class="form-control<%= (fieldErrors && fieldErrors.role) ? ' error' : '' %>" name="role" placeholder="Software Engineer" required />
+        <% if (fieldErrors && fieldErrors.role) { %><div class="field-error visible"><%= fieldErrors.role %></div><% } %>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Start date <span class="required">*</span></label>
+        <input class="form-control" type="date" name="start_date" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">End date</label>
+        <input class="form-control" type="date" name="end_date" id="endDate" />
+        <p class="form-hint">Leave blank if currently employed here.</p>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:1.25rem">
+      <label class="form-check">
+        <input class="form-check-input" type="checkbox" id="is_current" name="is_current" value="true" onchange="document.getElementById('endDate').disabled = this.checked; if(this.checked) document.getElementById('endDate').value='';" />
+        I currently work here
+      </label>
+    </div>
+    <button type="submit" class="btn btn-gold">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add employment
+    </button>
+  </form>
+</div>
