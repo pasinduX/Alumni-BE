@@ -13,7 +13,6 @@ function toCookieHeader(req: any) {
   return cookies ? { Cookie: cookies } : {};
 }
 
-/** Flash API error messages extracted from a failed fetch response */
 async function flashApiError(req: any, response: any, fallback = "Something went wrong") {
   try {
     const data: any = await response.json();
@@ -37,8 +36,6 @@ function handleUnauthorized(req: any, res: any, response: any) {
   }
   return null;
 }
-
-// ── Auth pages ──────────────────────────────────────────────────────────────
 
 router.get("/login", (req: any, res) => {
   if (req.query.email || req.query.password || req.query._csrf) {
@@ -74,16 +71,14 @@ router.get("/reset-password", (_req, res) => {
   res.render("auth/reset-password", { messages: res.locals.messages || {}, title: "Reset password" });
 });
 
-// ── Logout ──────────────────────────────────────────────────────────────────
 
 router.post("/logout", requireLogin, async (req: any, res) => {
   try {
     await fetch(`${apiUrl(req)}/auth/logout`, { method: "POST", headers: toCookieHeader(req) });
-  } catch { /* ignore */ }
+  } catch { }
   req.session.destroy(() => res.redirect("/web/login"));
 });
 
-// Keep the GET logout as a convenience (e.g. direct navigation)
 router.get("/logout", requireLogin, async (req: any, res) => {
   try {
     await fetch(`${apiUrl(req)}/auth/logout`, { method: "POST", headers: toCookieHeader(req) });
@@ -91,7 +86,6 @@ router.get("/logout", requireLogin, async (req: any, res) => {
   req.session.destroy(() => res.redirect("/web/login"));
 });
 
-// ── Profile overview ─────────────────────────────────────────────────────────
 
 router.get("/profile/test", requireLogin, (_req, res) => {
   res.send("OK /web/profile/test");
@@ -105,7 +99,6 @@ router.get("/profile", requireLogin, async (req: any, res, next) => {
     const redirect = handleUnauthorized(req, res, response);
     if (redirect) return redirect;
     if (response.status === 404) {
-      // user is signed in but has not created a profile yet
       return res.render("profile/profile", {
         profile: {},
         messages: { ...(res.locals.messages || {}), info: "No profile yet. Fill in your details to get started." },
@@ -141,7 +134,6 @@ router.post("/profile", requireLogin, async (req: any, res, next) => {
   }
 });
 
-// ── Profile image upload ─────────────────────────────────────────────────────
 
 router.post("/profile/image", requireLogin, upload.single("image"), async (req: any, res, next) => {
   try {
@@ -168,7 +160,6 @@ router.post("/profile/image", requireLogin, upload.single("image"), async (req: 
   }
 });
 
-// ── Credential sections ──────────────────────────────────────────────────────
 
 const sections = ["degrees", "certifications", "licences", "professional_courses", "employment_history"];
 

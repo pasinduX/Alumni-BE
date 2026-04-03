@@ -6,7 +6,9 @@ export async function getAlumniOfTheDay(req: Request, res: Response, next: NextF
     const today = new Date().toISOString().slice(0, 10);
 
     const w = await query(
-      `SELECT bw.id as bid_winner_id, bw.display_date, u.id as user_id, u.email, p.full_name, p.bio, p.linkedin_url, p.profile_image_url, p.monthly_win_count, p.attended_event_this_month
+      `SELECT bw.id as bid_winner_id, bw.display_date, u.id as user_id, u.email,
+              p.full_name, p.bio, p.linkedin_url, p.phone_number, p.profile_image_url,
+              p.monthly_win_count, p.attended_event_this_month
        FROM bid_winners bw
        JOIN bids b ON b.id = bw.bid_id
        JOIN users u ON u.id = bw.user_id
