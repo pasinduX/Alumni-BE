@@ -30,7 +30,8 @@ export async function register(req: Request, res: Response, next: NextFunction) 
       [email, passwordHash, token, expires],
     );
 
-    const verifyUrl = `${req.protocol}://${req.get("host")}/auth/verify-email?token=${token}`;
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+    const verifyUrl = `${baseUrl}/auth/verify-email?token=${token}`;
 
     await sendEmail(
       email,

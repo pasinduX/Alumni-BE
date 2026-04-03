@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://alumni:Myorange3842@app-database:5432/ar_alumni
+      PORT: 3000
+      SESSION_SECRET: eEJTaDy0NAP2AjzoBCxn/SbiOnc8U2PcxPxH8oOzBBIlVgcF4tsf2Rxy+10nHa7C
+      SMTP_HOST: sandbox.smtp.mailtrap.io
+      SMTP_PORT: 2525
+      SMTP_USER: 6cee5686a9a1a6
+      SMTP_PASS: 081a381a778ae4
+      EMAIL_FROM: noreply@eastminster.ac.uk
+      BASE_URL: http://localhost:8000
+    depends_on:
+      - app-database
+    volumes:
+      - ./uploads:/app/uploads
+
+  app-database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: alumni
+      POSTGRES_DB: ar_alumni
+      POSTGRES_PASSWORD: Myorange3842
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+
+  kong-database:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_DB: kong
+      POSTGRES_PASSWORD: kong
+    ports:
+      - "5433:5432"
+
+  kong-migration:
+    image: kong:latest
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kong
+    depends_on:
+      - kong-database
+    restart: on-failure
+
+  kong:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kong
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+    depends_on:
+      - kong-migration
+    restart: on-failure
+
+volumes:
+  pgdata:

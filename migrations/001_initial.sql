@@ -19,6 +19,7 @@ CREATE TABLE alumni_profiles (
   full_name VARCHAR(255),
   bio TEXT,
   linkedin_url TEXT,
+  phone_number TEXT,
   profile_image_url TEXT,
   monthly_win_count INT DEFAULT 0,
   attended_event_this_month BOOLEAN DEFAULT FALSE,
