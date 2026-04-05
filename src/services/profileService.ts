@@ -1,7 +1,6 @@
 import * as profileModel from "../models/profileModel";
 import type { UpdateProfileBody } from "../types/api";
 
-// Whitelist of safe table names — prevents SQL injection in dynamic queries.
 const SECTION_TABLES = [
   "degrees",
   "certifications",
@@ -11,15 +10,11 @@ const SECTION_TABLES = [
 ] as const;
 
 type ProfileSection = typeof SECTION_TABLES[number];
-
-/** Throws if `section` is not in the whitelist. */
 function assertSection(section: string): asserts section is ProfileSection {
   if (!SECTION_TABLES.includes(section as ProfileSection)) {
     throw new Error("Invalid profile section");
   }
 }
-
-// ─── Profile ─────────────────────────────────────────────────────────────────
 
 export async function getFullProfile(userId: string) {
   const profile = await profileModel.findProfileByUserId(userId);
@@ -73,8 +68,6 @@ export async function getProfileCompletion(userId: string) {
 export async function setAttendance(targetUserId: string, attended: boolean) {
   return profileModel.updateAttendance(targetUserId, attended);
 }
-
-// ─── Section CRUD ─────────────────────────────────────────────────────────────
 
 export async function createSectionEntry(
   userId: string,

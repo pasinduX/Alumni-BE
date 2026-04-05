@@ -1,6 +1,5 @@
 import * as profileModel from "../models/profileModel";
 
-/** Returns the full alumni-of-the-day profile for today, or null if none is set. */
 export async function getAlumniOfTheDay() {
   const today = new Date().toISOString().slice(0, 10);
 

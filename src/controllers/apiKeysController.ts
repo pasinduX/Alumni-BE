@@ -32,8 +32,6 @@ export async function keyStats(req: SessionRequest, res: Response, next: NextFun
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    // Service throws AppError(404) when the key is not found or not owned by this user
     const stats = await getApiKeyStats(userId, String(req.params.id));
     return res.json(stats);
   } catch (err) {
@@ -45,8 +43,6 @@ export async function revokeKey(req: SessionRequest, res: Response, next: NextFu
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    // Service throws AppError(404) when the key is not found or not owned by this user
     await revokeApiKey(userId, String(req.params.id));
     return res.json({ message: "Revoked" });
   } catch (err) {

@@ -23,8 +23,6 @@ export async function apiKeyAuth(req: APIRequest, res: Response, next: NextFunct
       if (match) {
         req.apiKeyId = key.id;
         req.apiUserId = key.user_id;
-
-        // Fire-and-forget — don't block the request on logging
         apiKeyModel.touchApiKey(key.id).catch(() => {});
         apiKeyModel.logApiKeyAccess(key.id, req.originalUrl).catch(() => {});
 

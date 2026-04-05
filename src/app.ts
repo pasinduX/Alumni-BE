@@ -114,7 +114,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
     return res.status(400).json({ error: "Invalid input value" });
   }
 
-  // Known application errors thrown by the service layer
   if (err instanceof AppError) {
     if (req.originalUrl.startsWith("/web")) {
       safeFlash("error", err.message);

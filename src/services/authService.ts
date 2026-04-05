@@ -7,10 +7,6 @@ import * as userModel from "../models/userModel";
 
 const SALT_ROUNDS = 12;
 
-/**
- * Registers a new user.
- * Throws AppError(400, ..., "INVALID_DOMAIN") or AppError(409, ..., "EMAIL_EXISTS").
- */
 export async function registerUser(email: string, password: string, baseUrl: string) {
   if (!email.endsWith(`@${config.allowedDomain}`)) {
     throw new AppError(400, `Email must end with @${config.allowedDomain}`, "INVALID_DOMAIN");
@@ -36,10 +32,6 @@ export async function registerUser(email: string, password: string, baseUrl: str
   );
 }
 
-/**
- * Verifies an e-mail token and marks the user verified.
- * Throws AppError(400, ..., "INVALID_TOKEN") or AppError(400, ..., "TOKEN_EXPIRED").
- */
 export async function verifyEmailToken(token: string) {
   const user = await userModel.findByVerificationToken(token);
   if (!user) throw new AppError(400, "Invalid verification token", "INVALID_TOKEN");
@@ -49,9 +41,6 @@ export async function verifyEmailToken(token: string) {
   await userModel.markEmailVerified(user.id);
 }
 
-/**
- * Checks credentials and returns the user id + role, or null for bad credentials.
- */
 export async function authenticateUser(email: string, password: string) {
   const user = await userModel.findByEmailWithAuth(email);
   if (!user || !user.is_verified) return null;
@@ -60,10 +49,6 @@ export async function authenticateUser(email: string, password: string) {
   return { id: user.id, role: user.role };
 }
 
-/**
- * Generates a password-reset token and e-mails it.
- * Silently succeeds even when the email doesn't exist (prevents enumeration).
- */
 export async function requestPasswordReset(email: string, baseUrl: string) {
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 60 * 60 * 1000);
@@ -77,10 +62,6 @@ export async function requestPasswordReset(email: string, baseUrl: string) {
   );
 }
 
-/**
- * Resets a user's password using a reset token.
- * Throws AppError(400, ..., "INVALID_TOKEN") or AppError(400, ..., "TOKEN_EXPIRED").
- */
 export async function resetUserPassword(token: string, newPassword: string) {
   const row = await userModel.findByResetToken(token);
   if (!row) throw new AppError(400, "Invalid reset token", "INVALID_TOKEN");
