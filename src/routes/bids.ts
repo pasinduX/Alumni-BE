@@ -19,21 +19,9 @@ const router = Router();
  * /bidding/place:
  *   post:
  *     summary: Place a bid for a slot
- *     parameters:
- *       - in: header
- *         name: x-csrf-token
- *         schema:
- *           type: string
- *         required: true
- *         description: CSRF token obtained from /auth/csrf-token
- *       - in: header
- *         name: x-no-csrf
- *         schema:
- *           type: string
- *         required: false
- *         description: Dev bypass header (1) for Swagger/Postman
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -63,6 +51,7 @@ router.post(
  *     summary: Update existing bid
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -92,6 +81,7 @@ router.put(
  *     summary: Cancel an existing bid
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     responses:
  *       204:
  *         description: Bid canceled

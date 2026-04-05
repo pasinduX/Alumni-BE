@@ -61,6 +61,6 @@ const selectWinner = async () => {
 };
 
 export function startWinnerScheduler() {
-  cron.schedule("0 18 * * *", selectWinner, { timezone: "UTC" });
-  console.info("Cron job scheduled at 18:00 UTC for winner selection");
+  cron.schedule("0 0 * * *", selectWinner, { timezone: "UTC" });
+  console.info("Cron job scheduled at 00:00 UTC for winner selection");
 }

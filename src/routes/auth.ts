@@ -13,7 +13,6 @@ import { handleValidationErrors } from "../middleware/validate";
 
 const router = Router();
 
-// Support GET endpoints for browser-based navigation fallback
 router.get("/login", (_req, res) => res.redirect("/web/login"));
 router.get("/register", (_req, res) => res.redirect("/web/register"));
 router.get("/forgot-password", (_req, res) => res.redirect("/web/forgot-password"));
@@ -23,6 +22,7 @@ router.get("/forgot-password", (_req, res) => res.redirect("/web/forgot-password
  * /auth/csrf-token:
  *   get:
  *     summary: Get current CSRF token (for API clients)
+ *     security: []
  *     responses:
  *       200:
  *         description: CSRF token returned
@@ -52,6 +52,8 @@ router.get("/csrf-token", (req, res) => {
  *   post:
  *     summary: Register a new user and send verification email
  *     description: Register alumni accounts for the configured university domain.
+ *     security:
+ *       - csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -93,6 +95,7 @@ router.post(
  * /auth/verify-email:
  *   get:
  *     summary: Verify user email with token
+ *     security: []
  *     parameters:
  *       - in: query
  *         name: token
@@ -114,19 +117,8 @@ router.get("/verify-email", verifyEmail);
  * /auth/login:
  *   post:
  *     summary: Authenticate user
- *     parameters:
- *       - in: header
- *         name: x-csrf-token
- *         schema:
- *           type: string
- *         required: false
- *         description: CSRF token, required for non-dev mode
- *       - in: header
- *         name: x-no-csrf
- *         schema:
- *           type: string
- *         required: false
- *         description: Optional dev bypass header set to 1 for Swagger/Postman
+ *     security:
+ *       - csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -159,6 +151,9 @@ router.post(
  * /auth/logout:
  *   post:
  *     summary: Log out current user
+ *     security:
+ *       - sessionAuth: []
+ *         csrfToken: []
  *     responses:
  *       200:
  *         description: Logged out
@@ -170,6 +165,8 @@ router.post("/logout", logout);
  * /auth/forgot-password:
  *   post:
  *     summary: Request password reset link
+ *     security:
+ *       - csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -197,6 +194,8 @@ router.post(
  * /auth/reset-password:
  *   post:
  *     summary: Reset password using token
+ *     security:
+ *       - csrfToken: []
  *     requestBody:
  *       required: true
  *       content:

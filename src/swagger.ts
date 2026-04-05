@@ -33,9 +33,6 @@ const swaggerOptions: swaggerJSDoc.Options = {
         },
       },
     },
-    security: [
-      { csrfToken: [] },
-    ],
   },
   apis: ["./src/routes/*.ts"],
 };

@@ -16,6 +16,7 @@ import { globalLimiter } from "./middleware/rateLimiter";
 import { requestLogger } from "./middleware/logger";
 import { swaggerSpec } from "./swagger";
 import { startWinnerScheduler } from "./jobs/winnerSelector";
+import { AppError } from "./utils/AppError";
 
 const app = express();
 
@@ -57,8 +58,6 @@ app.use(requestLogger);
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// csurf: enable for most paths, but allow swagger testing and the login endpoint
-// to support Swagger "Try it out" without a browser-generated token.
 app.use((req, res, next) => {
   if (process.env.NODE_ENV !== "production") {
     if (req.path.startsWith("/api-docs")) {
@@ -107,13 +106,21 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   }
 
   if (err && err.code === "22P02") {
-    // PostgreSQL invalid_text_representation (invalid date for example)
     console.warn("Invalid input syntax error", err.message);
     if (req.originalUrl.startsWith("/web")) {
       safeFlash("error", "Invalid date value. Please use YYYY-MM-DD or leave blank.");
       return res.redirect(req.originalUrl.startsWith("/web/") ? req.originalUrl : "/web/profile");
     }
     return res.status(400).json({ error: "Invalid input value" });
+  }
+
+  // Known application errors thrown by the service layer
+  if (err instanceof AppError) {
+    if (req.originalUrl.startsWith("/web")) {
+      safeFlash("error", err.message);
+      return res.redirect((req.headers.referer as string) || "/web/login");
+    }
+    return res.status(err.statusCode).json({ error: err.message });
   }
 
   console.error(err);

@@ -42,6 +42,7 @@ router.get("/profile", requireLogin, getProfile);
  *     summary: Update profile details
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -86,6 +87,7 @@ router.put(
  *     summary: Upload profile image
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -129,6 +131,7 @@ router.get("/profile/completion", requireLogin, completion);
  *           enum: [degrees, certifications, licences, professional_courses, employment_history]
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -158,6 +161,7 @@ router.post("/profile/:section", requireLogin, handleValidationErrors, createSec
  *           type: string
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
@@ -188,6 +192,7 @@ router.put("/profile/:section/:id", requireLogin, handleValidationErrors, update
  *           type: string
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     responses:
  *       200:
  *         description: Entry deleted
@@ -201,6 +206,7 @@ router.delete("/profile/:section/:id", requireLogin, deleteSectionEntry);
  *     summary: Set event attendance for profile
  *     security:
  *       - sessionAuth: []
+ *         csrfToken: []
  *     requestBody:
  *       required: true
  *       content:
