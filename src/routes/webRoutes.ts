@@ -98,9 +98,32 @@ router.get("/profile", requireLogin, async (req: any, res, next) => {
     });
     const redirect = handleUnauthorized(req, res, response);
     if (redirect) return redirect;
+
+    const now = new Date();
+    const bidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    let bid: any = null;
+    let isMonthlyWinner = false;
+
+    try {
+      const { query } = await import("../config/db");
+      const profileRow = await query("SELECT id FROM alumni_profiles WHERE user_id = $1", [req.session.userId]);
+      if (profileRow.rows[0]) {
+        const alumniId = profileRow.rows[0].id;
+        const bidResult = await query(
+          "SELECT id, amount, bid_month, is_winner FROM monthly_bids WHERE alumni_id = $1 AND bid_month = $2 ORDER BY created_at DESC LIMIT 1",
+          [alumniId, bidMonth],
+        );
+        bid = bidResult.rows[0] || null;
+        isMonthlyWinner = bid?.is_winner === true;
+      }
+    } catch (_e) { /* non-fatal */ }
+
     if (response.status === 404) {
       return res.render("profile/profile", {
         profile: {},
+        bid: null,
+        isMonthlyWinner: false,
+        bidMonth,
         messages: { ...(res.locals.messages || {}), info: "No profile yet. Fill in your details to get started." },
         title: "My Profile",
       });
@@ -110,7 +133,7 @@ router.get("/profile", requireLogin, async (req: any, res, next) => {
       return res.redirect("/web/login");
     }
     const profile = await response.json();
-    res.render("profile/profile", { profile, messages: res.locals.messages || {}, title: "My Profile" });
+    res.render("profile/profile", { profile, bid, isMonthlyWinner, bidMonth, messages: res.locals.messages || {}, title: "My Profile" });
   } catch (err) {
     next(err);
   }
@@ -135,7 +158,7 @@ router.post("/profile", requireLogin, async (req: any, res, next) => {
 });
 
 
-router.post("/profile/image", requireLogin, upload.single("image"), async (req: any, res, next) => {
+router.post("/profile/image", requireLogin, upload.single("image"), async (req: any, res) => {
   try {
     if (!req.file) {
       req.flash("error", "Please select an image file");
@@ -163,6 +186,51 @@ router.post("/profile/image", requireLogin, upload.single("image"), async (req: 
 
 // ─── Monthly bid ──────────────────────────────────────────────────────────────
 
+router.get("/profile/bid", requireLogin, async (req: any, res, next) => {
+  try {
+    const { query } = await import("../config/db");
+    const userId: string = req.session.userId;
+
+    const profileRow = await query("SELECT id FROM alumni_profiles WHERE user_id = $1", [userId]);
+    if (!profileRow.rows[0]) {
+      req.flash("error", "Profile not found. Please complete your profile first.");
+      return res.redirect("/web/profile");
+    }
+    const alumniId = profileRow.rows[0].id;
+
+    const now = new Date();
+    const bidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const monthName = now.toLocaleString("en-GB", { month: "long", year: "numeric" });
+
+    const [currentBidResult, historyResult, countResult] = await Promise.all([
+      query(
+        "SELECT id, amount, bid_month, is_winner, created_at FROM monthly_bids WHERE alumni_id = $1 AND bid_month = $2 ORDER BY created_at DESC LIMIT 1",
+        [alumniId, bidMonth],
+      ),
+      query(
+        "SELECT id, amount, bid_month, is_winner, created_at FROM monthly_bids WHERE alumni_id = $1 ORDER BY created_at DESC",
+        [alumniId],
+      ),
+      query(
+        "SELECT COUNT(*) AS cnt FROM monthly_bids WHERE alumni_id = $1 AND bid_month = $2",
+        [alumniId, bidMonth],
+      ),
+    ]);
+
+    res.render("profile/bid", {
+      bid: currentBidResult.rows[0] || null,
+      bidHistory: historyResult.rows,
+      bidsUsedThisMonth: parseInt(countResult.rows[0].cnt, 10),
+      bidMonth,
+      monthName,
+      messages: res.locals.messages || {},
+      title: "My Bid",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
   try {
     const { query } = await import("../config/db");
@@ -177,13 +245,13 @@ router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
       req.flash("error", "Profile not found. Please complete your profile first.");
       return res.redirect("/web/profile");
     }
-    const alumniId: number = profileRow.rows[0].id;
+    const alumniId: string = profileRow.rows[0].id;
 
     // Parse and validate amount
     const amount = parseFloat(req.body.amount);
     if (isNaN(amount) || amount <= 0) {
       req.flash("error", "Please enter a valid bid amount.");
-      return res.redirect("/web/profile");
+      return res.redirect("/web/profile/bid");
     }
 
     // Current YYYY-MM month string
@@ -199,7 +267,7 @@ router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
 
     if (bidCount >= 3) {
       req.flash("error", "Monthly bid limit reached. You may place at most 3 bids per month.");
-      return res.redirect("/web/profile");
+      return res.redirect("/web/profile/bid");
     }
 
     // Check whether this alumni already has a bid this month
@@ -213,8 +281,8 @@ router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
       const previousAmount = parseFloat(existing.amount);
       if (amount <= previousAmount) {
         // Do NOT reveal other alumni bids – only compare against own previous bid
-        req.flash("error", `Bid must be higher than your current bid of ${previousAmount.toFixed(2)}.`);
-        return res.redirect("/web/profile");
+        req.flash("error", `Bid must be higher than your current bid of £${previousAmount.toFixed(2)}.`);
+        return res.redirect("/web/profile/bid");
       }
       // Update the existing row
       await query(
@@ -229,8 +297,8 @@ router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
       );
     }
 
-    req.flash("success", `Bid of ${amount.toFixed(2)} placed for ${bidMonth}.`);
-    res.redirect("/web/profile");
+    req.flash("success", `Bid of £${amount.toFixed(2)} placed for ${bidMonth}.`);
+    res.redirect("/web/profile/bid");
   } catch (err) {
     next(err);
   }

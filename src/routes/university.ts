@@ -330,4 +330,79 @@ router.get(
   }
 );
 
+// ── GET /university/bidding ───────────────────────────────────────────────────
+
+router.get(
+  "/bidding",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const now = new Date();
+      const bidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      const result = await query(
+        `SELECT
+           ap.full_name        AS alumni_name,
+           COUNT(mb.id)::int   AS bids_count,
+           BOOL_OR(mb.is_winner) AS is_winner
+         FROM alumni_profiles ap
+         JOIN monthly_bids mb ON mb.alumni_id = ap.id
+         WHERE mb.bid_month = $1
+         GROUP BY ap.id, ap.full_name
+         ORDER BY ap.full_name`,
+        [bidMonth],
+      );
+
+      const flashMessages = (req as any).flash ? (req as any).flash() : {};
+
+      res.render("university/bidding", {
+        title:       "Bidding Activity",
+        biddingData: result.rows,
+        bidMonth,
+        messages:    flashMessages,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── POST /university/bidding/select-winner ────────────────────────────────────
+
+router.post(
+  "/bidding/select-winner",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const now = new Date();
+      const bidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+      const topBid = await query(
+        `SELECT mb.id, ap.full_name
+         FROM monthly_bids mb
+         JOIN alumni_profiles ap ON ap.id = mb.alumni_id
+         WHERE mb.bid_month = $1
+         ORDER BY mb.amount DESC
+         LIMIT 1`,
+        [bidMonth],
+      );
+
+      if (topBid.rows.length === 0) {
+        (req as any).flash("error", "No bids found for this month.");
+        return res.redirect("/university/bidding");
+      }
+
+      const winner = topBid.rows[0];
+
+      await query("UPDATE monthly_bids SET is_winner = FALSE WHERE bid_month = $1", [bidMonth]);
+      await query("UPDATE monthly_bids SET is_winner = TRUE  WHERE id = $1",        [winner.id]);
+
+      (req as any).flash("success", `Winner selected: ${winner.full_name}`);
+      res.redirect("/university/bidding");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;

@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS monthly_bids (
   id           SERIAL        PRIMARY KEY,
-  alumni_id    INTEGER       NOT NULL
+  alumni_id    UUID          NOT NULL
                  REFERENCES alumni_profiles(id) ON DELETE CASCADE,
   amount       NUMERIC(10,2) NOT NULL CHECK (amount > 0),
   bid_month    VARCHAR(7)    NOT NULL,             -- 'YYYY-MM'

@@ -1,0 +1,167 @@
+<%# views/profile/bid.ejs %>
+
+<div class="page-header">
+  <div class="page-header-text">
+    <h1>My Bid</h1>
+    <p>Bid for a chance to be featured as Alumni of the Month</p>
+  </div>
+  <a href="/web/profile" class="btn btn-outline" style="text-decoration:none;font-size:13px;">← Back to profile</a>
+</div>
+
+<!-- Bid form card -->
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <%= monthName %>
+  </p>
+
+  <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-bottom:1.25rem;">
+    <div>
+      <div style="font-size:11px;color:var(--ink-light);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:2px;">Bids used this month</div>
+      <div style="font-size:22px;font-weight:700;color:var(--ink);font-family:var(--font-display);"><%= bidsUsedThisMonth %> <span style="font-size:14px;font-weight:400;color:var(--ink-light);">of 3</span></div>
+    </div>
+    <% if (bid) { %>
+    <div>
+      <div style="font-size:11px;color:var(--ink-light);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:2px;">Current bid</div>
+      <div style="font-size:22px;font-weight:700;color:var(--gold-dark);font-family:var(--font-display);">£<%= parseFloat(bid.amount).toFixed(2) %></div>
+    </div>
+    <% } %>
+  </div>
+
+  <% if (bidsUsedThisMonth >= 3) { %>
+    <div class="alert alert-info">
+      <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      You have reached your monthly bid limit. Results will be announced at the end of <%= monthName %>.
+    </div>
+  <% } else { %>
+    <form method="post" action="/web/profile/bid" id="bidForm">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <div class="form-group" style="max-width:260px;">
+        <label class="form-label" for="bidAmount">
+          Bid amount (£) <span class="required">*</span>
+        </label>
+        <input
+          class="form-control"
+          type="number"
+          id="bidAmount"
+          name="amount"
+          min="0.01"
+          step="0.01"
+          placeholder="e.g. 50.00"
+          required
+          <% if (bid) { %>value="<%= parseFloat(bid.amount).toFixed(2) %>"<% } %>
+        />
+        <% if (bid) { %>
+          <p class="form-hint">Your current bid is £<%= parseFloat(bid.amount).toFixed(2) %>. Enter a higher amount to update it.</p>
+        <% } %>
+      </div>
+      <button type="button" class="btn btn-gold" id="placeBidBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Place Bid
+      </button>
+    </form>
+
+    <!-- Inline confirmation box (hidden until triggered) -->
+    <div id="bidConfirm" style="display:none;margin-top:1.25rem;padding:1.1rem 1.25rem;background:var(--gold-light);border:1.5px solid var(--gold);border-radius:var(--radius);max-width:440px;">
+      <p style="font-size:13.5px;color:var(--ink);margin-bottom:0.75rem;line-height:1.5;" id="bidConfirmText"></p>
+      <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+        <button type="button" class="btn btn-gold" id="confirmSubmitBtn" style="font-size:13px;">Confirm</button>
+        <button type="button" class="btn btn-outline" id="cancelBidBtn" style="font-size:13px;">Cancel</button>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<!-- Bid history table -->
+<div class="card">
+  <p class="card-title">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Bid History
+  </p>
+  <% if (!bidHistory || bidHistory.length === 0) { %>
+    <div class="empty-state" style="padding:2rem 0;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="36" height="36" style="color:var(--ink-light);margin-bottom:8px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <p style="color:var(--ink-light);font-size:13.5px;">No bids placed yet.</p>
+    </div>
+  <% } else { %>
+    <div style="overflow-x:auto;">
+      <table class="table" style="width:100%;">
+        <thead>
+          <tr>
+            <th>Month</th>
+            <th>Amount</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% bidHistory.forEach(function(row) {
+               var isPending = row.bid_month === bidMonth;
+               var isWinner  = row.is_winner;
+               var [y, m]    = row.bid_month.split('-');
+               var label     = new Date(+y, +m - 1, 1).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+          %>
+          <tr>
+            <td><%= label %></td>
+            <td style="font-weight:600;color:var(--ink);">£<%= parseFloat(row.amount).toFixed(2) %></td>
+            <td>
+              <% if (isWinner) { %>
+                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:var(--gold-light);color:var(--gold-dark);border:1px solid var(--gold);border-radius:100px;font-size:12px;font-weight:700;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="var(--gold)"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                  Winner
+                </span>
+              <% } else if (isPending) { %>
+                <span style="display:inline-flex;padding:3px 10px;background:var(--info-light);color:var(--info);border-radius:100px;font-size:12px;font-weight:600;">Pending</span>
+              <% } else { %>
+                <span style="font-size:12.5px;color:var(--ink-light);font-weight:500;">Lost</span>
+              <% } %>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>
+
+<script>
+(function () {
+  var form          = document.getElementById('bidForm');
+  var amountInput   = document.getElementById('bidAmount');
+  var placeBidBtn   = document.getElementById('placeBidBtn');
+  var confirmBox    = document.getElementById('bidConfirm');
+  var confirmText   = document.getElementById('bidConfirmText');
+  var confirmSubmit = document.getElementById('confirmSubmitBtn');
+  var cancelBtn     = document.getElementById('cancelBidBtn');
+
+  if (!form) return;
+
+  var bidsUsed  = <%= bidsUsedThisMonth %>;
+  var monthName = '<%= monthName.replace(/'/g, "\\'") %>';
+
+  placeBidBtn.addEventListener('click', function () {
+    var raw = parseFloat(amountInput.value);
+    if (!amountInput.validity.valid || isNaN(raw) || raw <= 0) {
+      amountInput.focus();
+      return;
+    }
+    var remaining = 3 - bidsUsed;
+    var formatted = raw.toFixed(2);
+    confirmText.textContent =
+      'You are about to place a bid of £' + formatted +
+      ' for ' + monthName + '. ' +
+      'This uses ' + (bidsUsed + 1) + ' of your 3 monthly bids. ' +
+      'You cannot decrease your bid after placing it. Confirm?';
+    confirmBox.style.display = 'block';
+    placeBidBtn.disabled = true;
+  });
+
+  confirmSubmit.addEventListener('click', function () {
+    form.submit();
+  });
+
+  cancelBtn.addEventListener('click', function () {
+    confirmBox.style.display = 'none';
+    placeBidBtn.disabled = false;
+  });
+})();
+</script>
