@@ -161,6 +161,83 @@ router.post("/profile/image", requireLogin, upload.single("image"), async (req: 
 });
 
 
+// ─── Monthly bid ──────────────────────────────────────────────────────────────
+
+router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
+  try {
+    const { query } = await import("../config/db");
+    const userId: string = req.session.userId;
+
+    // Resolve the alumni_profiles.id (integer PK used by monthly_bids)
+    const profileRow = await query(
+      "SELECT id FROM alumni_profiles WHERE user_id = $1",
+      [userId],
+    );
+    if (!profileRow.rows[0]) {
+      req.flash("error", "Profile not found. Please complete your profile first.");
+      return res.redirect("/web/profile");
+    }
+    const alumniId: number = profileRow.rows[0].id;
+
+    // Parse and validate amount
+    const amount = parseFloat(req.body.amount);
+    if (isNaN(amount) || amount <= 0) {
+      req.flash("error", "Please enter a valid bid amount.");
+      return res.redirect("/web/profile");
+    }
+
+    // Current YYYY-MM month string
+    const now = new Date();
+    const bidMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+    // Count how many bids this alumni has placed this month
+    const countResult = await query(
+      "SELECT COUNT(*) AS cnt FROM monthly_bids WHERE alumni_id = $1 AND bid_month = $2",
+      [alumniId, bidMonth],
+    );
+    const bidCount = parseInt(countResult.rows[0].cnt, 10);
+
+    if (bidCount >= 3) {
+      req.flash("error", "Monthly bid limit reached. You may place at most 3 bids per month.");
+      return res.redirect("/web/profile");
+    }
+
+    // Check whether this alumni already has a bid this month
+    const existingResult = await query(
+      "SELECT id, amount FROM monthly_bids WHERE alumni_id = $1 AND bid_month = $2 ORDER BY created_at DESC LIMIT 1",
+      [alumniId, bidMonth],
+    );
+    const existing = existingResult.rows[0];
+
+    if (existing) {
+      const previousAmount = parseFloat(existing.amount);
+      if (amount <= previousAmount) {
+        // Do NOT reveal other alumni bids – only compare against own previous bid
+        req.flash("error", `Bid must be higher than your current bid of ${previousAmount.toFixed(2)}.`);
+        return res.redirect("/web/profile");
+      }
+      // Update the existing row
+      await query(
+        "UPDATE monthly_bids SET amount = $1, updated_at = NOW() WHERE id = $2",
+        [amount, existing.id],
+      );
+    } else {
+      // Insert a new bid row
+      await query(
+        "INSERT INTO monthly_bids (alumni_id, amount, bid_month) VALUES ($1, $2, $3)",
+        [alumniId, amount, bidMonth],
+      );
+    }
+
+    req.flash("success", `Bid of ${amount.toFixed(2)} placed for ${bidMonth}.`);
+    res.redirect("/web/profile");
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── Profile sections ─────────────────────────────────────────────────────────
+
 const sections = ["degrees", "certifications", "licences", "professional_courses", "employment_history"];
 
 sections.forEach((section) => {

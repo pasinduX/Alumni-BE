@@ -1,0 +1,62 @@
+<%- /* views/university/login.ejs */ %>
+
+<div class="auth-bg">
+  <div class="auth-panel">
+
+    <div class="auth-header">
+      <div class="auth-header-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <h1>University Portal</h1>
+      <p>Sign in with your university account</p>
+    </div>
+
+    <div class="auth-card">
+      <% if (error && error.length) { %>
+        <div class="alert alert-danger" style="display:flex;">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <form method="POST" action="/university/login" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
+        <div class="form-group">
+          <label class="form-label" for="email">University Email</label>
+          <input
+            class="form-control"
+            type="email"
+            id="email"
+            name="email"
+            placeholder="you@eastminster.ac.uk"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input
+            class="form-control"
+            type="password"
+            id="password"
+            name="password"
+            autocomplete="current-password"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,238 @@
+<%# views/university/charts/trends.ejs %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem;
+    display: flex; flex-direction: column; gap: 1.5rem;
+    background: var(--up-surface);
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; }
+  .up-breadcrumb a:hover { color:#1D4ED8; text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); }
+  .up-breadcrumb-current { color:var(--up-text-mid); font-weight:500; }
+
+  .up-page-header-text h1 { font-size:1.45rem; font-weight:700; color:var(--up-text); letter-spacing:-0.3px; }
+  .up-page-header-text p  { font-size:13px; color:var(--up-muted); margin-top:4px; }
+
+  /* Stat strip */
+  .up-stat-row { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:1rem; }
+  .up-stat {
+    background:var(--up-white); border:1px solid var(--up-border);
+    border-radius:var(--up-radius); padding:1rem 1.2rem; box-shadow:var(--up-shadow);
+    transition:box-shadow 0.18s, transform 0.18s;
+  }
+  .up-stat:hover { box-shadow:0 4px 16px rgba(37,99,235,0.1); transform:translateY(-1px); }
+  .up-stat-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.7px; color:var(--up-muted); }
+  .up-stat-value { font-size:1.65rem; font-weight:700; color:var(--up-text); line-height:1; margin-top:6px; letter-spacing:-0.5px; }
+
+  /* Chart card */
+  .up-chart-card {
+    background:var(--up-white); border:1px solid var(--up-border);
+    border-radius:var(--up-radius); box-shadow:var(--up-shadow);
+    display:flex; flex-direction:column; flex:1; overflow:hidden;
+  }
+  .up-chart-card-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:1.25rem 1.5rem; border-bottom:1px solid var(--up-border);
+    gap:1rem; flex-wrap:wrap;
+  }
+  .up-chart-card-title { font-size:14px; font-weight:700; color:var(--up-text); }
+  .up-chart-card-sub   { font-size:12px; color:var(--up-muted); margin-top:2px; }
+  .up-btn-icon {
+    display:inline-flex; align-items:center; gap:5px; padding:6px 12px;
+    border-radius:8px; border:1px solid var(--up-border); background:var(--up-white);
+    color:var(--up-text-mid); font-size:12px; font-weight:600; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .up-btn-icon:hover { border-color:var(--up-blue-400); background:var(--up-blue-light); color:var(--up-blue); }
+  .up-btn-icon svg { width:13px; height:13px; }
+  .up-chart-body { padding:1.5rem; flex:1; }
+  .up-chart-wrap { position:relative; min-height:380px; flex:1; }
+  .up-empty { color:var(--up-muted); font-size:13.5px; text-align:center; padding:4rem 0; }
+
+  @media (max-width: 900px) { .uni-main { padding:1.25rem; } .up-chart-wrap { min-height:280px; } }
+</style>
+
+<div class="uni-shell">
+
+  <%- include('../partials/sidebar', { activePage: 'certification-trends' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Analytics</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span class="up-breadcrumb-current">Certification Trends</span>
+    </nav>
+
+    <div class="up-page-header-text">
+      <h1>Certification Trends</h1>
+      <p>Monthly certification completions across all alumni over the past 12 months.</p>
+    </div>
+
+    <div class="up-stat-row">
+      <div class="up-stat">
+        <div class="up-stat-label">Total (12 mo)</div>
+        <div class="up-stat-value" id="statTotal">—</div>
+      </div>
+      <div class="up-stat">
+        <div class="up-stat-label">Peak Month</div>
+        <div class="up-stat-value" id="statPeak">—</div>
+      </div>
+      <div class="up-stat">
+        <div class="up-stat-label">Monthly Avg</div>
+        <div class="up-stat-value" id="statAvg">—</div>
+      </div>
+      <div class="up-stat">
+        <div class="up-stat-label">This Month</div>
+        <div class="up-stat-value" id="statLatest">—</div>
+      </div>
+    </div>
+
+    <div class="up-chart-card">
+      <div class="up-chart-card-head">
+        <div>
+          <div class="up-chart-card-title">Completions per Month</div>
+          <div class="up-chart-card-sub">12-month rolling view — hover for detail</div>
+        </div>
+        <button class="up-btn-icon" id="btnDownload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export PNG
+        </button>
+      </div>
+      <div class="up-chart-body">
+        <div class="up-chart-wrap" id="chartWrap">
+          <canvas id="trendsChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var raw = <%- chartData %>;
+
+  if (!raw || !raw.length) {
+    document.getElementById('chartWrap').innerHTML =
+      '<div class="up-empty">No certification data for the past 12 months.</div>';
+    return;
+  }
+
+  /* Fill full 12-month window */
+  var now = new Date();
+  var allMonths = [];
+  for (var i = 11; i >= 0; i--) {
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    allMonths.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+  }
+  var dataMap = {};
+  raw.forEach(function (r) { dataMap[r.month] = r.count; });
+  var counts = allMonths.map(function (mo) { return dataMap[mo] || 0; });
+
+  /* Stats */
+  var total  = counts.reduce(function (s, v) { return s + v; }, 0);
+  var peak   = Math.max.apply(null, counts);
+  var avg    = counts.length ? (total / counts.length).toFixed(1) : 0;
+  var thisKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById('statTotal').textContent  = total.toLocaleString();
+  document.getElementById('statPeak').textContent   = peak.toLocaleString();
+  document.getElementById('statAvg').textContent    = avg;
+  document.getElementById('statLatest').textContent = (dataMap[thisKey] || 0).toLocaleString();
+
+  /* Blue gradient fill */
+  var ctx = document.getElementById('trendsChart').getContext('2d');
+  var gradient = ctx.createLinearGradient(0, 0, 0, 380);
+  gradient.addColorStop(0,   'rgba(37,99,235,0.30)');
+  gradient.addColorStop(0.65,'rgba(37,99,235,0.07)');
+  gradient.addColorStop(1,   'rgba(37,99,235,0)');
+
+  var chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: allMonths,
+      datasets: [{
+        label: 'Certifications completed',
+        data:  counts,
+        borderColor:          '#2563EB',
+        borderWidth:          2.5,
+        pointBackgroundColor: '#3B82F6',
+        pointBorderColor:     '#1D4ED8',
+        pointBorderWidth:     1.5,
+        pointRadius:          4,
+        pointHoverRadius:     6,
+        tension:              0.4,
+        fill:                 true,
+        backgroundColor:      gradient,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      animation:   { duration:700, easing:'easeOutQuart' },
+      plugins: {
+        legend: {
+          display: true, position: 'top',
+          labels: { boxWidth:13, font:{ size:12 }, color:'#334155' }
+        },
+        title: { display: false },
+        tooltip: {
+          backgroundColor: '#0F172A', titleColor:'#60A5FA',
+          bodyColor:'#E2E8F0', padding:12, cornerRadius:8,
+          borderColor:'rgba(59,130,246,0.3)', borderWidth:1,
+          callbacks: {
+            title: function (items) {
+              var parts = items[0].label.split('-');
+              var d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+              return d.toLocaleDateString('en-GB', { month:'long', year:'numeric' });
+            },
+            label: function (item) { return '  Completions: ' + item.raw; },
+            afterLabel: function (item) {
+              return total > 0 ? '  Share of year: ' + ((item.raw/total)*100).toFixed(1) + '%' : '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title:  { display:true, text:'Month', font:{ size:12, weight:'500' }, color:'#94A3B8', padding:{ top:8 } },
+          ticks:  {
+            color:'#94A3B8', font:{ size:11.5 },
+            callback: function (val, idx) {
+              var lbl = allMonths[idx]; if (!lbl) return lbl;
+              var parts = lbl.split('-');
+              return new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1)
+                .toLocaleDateString('en-GB', { month:'short', year:'2-digit' });
+            }
+          },
+          grid:   { color:'rgba(226,232,240,0.6)' },
+          border: { display:false },
+        },
+        y: {
+          title:  { display:true, text:'Certifications', font:{ size:12, weight:'500' }, color:'#94A3B8', padding:{ bottom:8 } },
+          ticks:  { precision:0, color:'#94A3B8', font:{ size:11.5 } },
+          grid:   { color:'rgba(226,232,240,0.8)' },
+          border: { display:false },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+
+  document.getElementById('btnDownload').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = chartInstance.toBase64Image('image/png', 1);
+    a.download = 'certification-trends.png'; a.click();
+  });
+})();
+</script>

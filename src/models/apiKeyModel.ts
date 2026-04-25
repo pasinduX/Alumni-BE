@@ -1,17 +1,24 @@
 
 import { query } from "../config/db";
 
-export async function createApiKey(userId: string, keyHash: string, label: string) {
+export async function createApiKey(
+  userId: string,
+  keyHash: string,
+  clientName: string,
+  permissions: string[] = []
+) {
   const r = await query(
-    "INSERT INTO api_keys (user_id, key_hash, label) VALUES ($1, $2, $3) RETURNING id, label, created_at",
-    [userId, keyHash, label],
+    `INSERT INTO api_keys (user_id, key_hash, client_name, permissions)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, client_name, permissions, is_active, created_at`,
+    [userId, keyHash, clientName, permissions],
   );
   return r.rows[0];
 }
 
 export async function findApiKeysByUser(userId: string) {
   const r = await query(
-    "SELECT id, label, is_revoked, usage_count, last_used_at, created_at FROM api_keys WHERE user_id = $1",
+    "SELECT id, client_name, permissions, is_active, created_at FROM api_keys WHERE user_id = $1",
     [userId],
   );
   return r.rows;
@@ -19,7 +26,7 @@ export async function findApiKeysByUser(userId: string) {
 
 export async function findApiKeyById(id: string, userId: string) {
   const r = await query(
-    "SELECT id, usage_count, last_used_at FROM api_keys WHERE id = $1 AND user_id = $2",
+    "SELECT id, client_name, permissions, is_active, created_at FROM api_keys WHERE id = $1 AND user_id = $2",
     [id, userId],
   );
   return r.rows[0] ?? null;
@@ -27,7 +34,11 @@ export async function findApiKeyById(id: string, userId: string) {
 
 export async function findKeyLogs(apiKeyId: string) {
   const r = await query(
-    "SELECT endpoint, accessed_at FROM api_key_logs WHERE api_key_id = $1 ORDER BY accessed_at DESC LIMIT 20",
+    `SELECT endpoint, method, status_code, accessed_at
+     FROM api_key_usage_logs
+     WHERE api_key_id = $1
+     ORDER BY accessed_at DESC
+     LIMIT 20`,
     [apiKeyId],
   );
   return r.rows;
@@ -35,30 +46,37 @@ export async function findKeyLogs(apiKeyId: string) {
 
 export async function revokeApiKey(id: string, userId: string) {
   const r = await query(
-    "UPDATE api_keys SET is_revoked = true WHERE id = $1 AND user_id = $2 RETURNING id",
+    "UPDATE api_keys SET is_active = false WHERE id = $1 AND user_id = $2 RETURNING id",
     [id, userId],
   );
   return (r.rowCount ?? 0) > 0;
 }
 
+export async function findActiveApiKeyByHash(keyHash: string) {
+  const r = await query(
+    "SELECT id, user_id FROM api_keys WHERE key_hash = $1 AND is_active = TRUE LIMIT 1",
+    [keyHash],
+  );
+  return r.rows[0] ?? null;
+}
+
 export async function findAllActiveApiKeys() {
   const r = await query(
-    "SELECT id, user_id, key_hash FROM api_keys WHERE is_revoked = false",
+    "SELECT id, user_id, key_hash FROM api_keys WHERE is_active = TRUE",
     [],
   );
   return r.rows as { id: string; user_id: string; key_hash: string }[];
 }
 
-export async function touchApiKey(id: string) {
-  await query(
-    "UPDATE api_keys SET usage_count = usage_count + 1, last_used_at = NOW() WHERE id = $1",
-    [id],
-  );
+export async function touchApiKey(_id: string) {
+  // Usage is recorded via api_key_usage_logs; no last_used_at column exists
+  return;
 }
 
-export async function logApiKeyAccess(id: string, endpoint: string) {
+export async function logApiKeyAccess(id: string, endpoint: string, method: string, statusCode: number) {
   await query(
-    "INSERT INTO api_key_logs (api_key_id, endpoint) VALUES ($1, $2)",
-    [id, endpoint],
+    `INSERT INTO api_key_usage_logs (api_key_id, endpoint, method, status_code)
+     VALUES ($1, $2, $3, $4)`,
+    [id, endpoint, method, statusCode],
   );
 }

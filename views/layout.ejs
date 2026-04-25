@@ -682,18 +682,75 @@
       .quick-links { grid-template-columns: repeat(2, 1fr); }
       .form-row { grid-template-columns: 1fr; }
     }
+
+    /* ── Hamburger button (shown on mobile only) ── */
+    .btn-hamburger {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--white);
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .btn-hamburger:hover { background: rgba(255,255,255,0.15); }
+    .btn-hamburger svg { width: 18px; height: 18px; pointer-events: none; }
+
+    /* ── Mobile sidebar drawer ── */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 190;
+      backdrop-filter: blur(2px);
+    }
+    .sidebar-backdrop.open { display: block; }
+
+    @media (max-width: 800px) {
+      .btn-hamburger { display: flex; }
+
+      .sidebar {
+        display: block;          /* override the hide-on-mobile rule */
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 195;
+        transform: translateX(-110%);
+        transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+        padding-top: calc(var(--nav-h) + 0.5rem); /* clear the fixed topnav */
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+    }
   </style>
 </head>
 <body>
 
 <nav class="topnav">
-  <a class="topnav-brand" href="<%= (typeof user !== 'undefined' && user) ? '/web/profile' : '/web/login' %>">
-    <div class="topnav-brand-mark">AR</div>
-    <div>
-      <div class="topnav-brand-text">Alumni Network</div>
-      <div class="topnav-brand-sub">Influencer Platform</div>
-    </div>
-  </a>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <% if (typeof user !== 'undefined' && user) { %>
+    <button class="btn-hamburger" id="sidebarToggle" aria-label="Toggle navigation" aria-expanded="false">
+      <svg id="hamburgerIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      <svg id="closeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <% } %>
+    <a class="topnav-brand" href="<%= (typeof user !== 'undefined' && user) ? '/web/profile' : '/web/login' %>">
+      <div class="topnav-brand-mark">AR</div>
+      <div>
+        <div class="topnav-brand-text">Alumni Network</div>
+        <div class="topnav-brand-sub">Influencer Platform</div>
+      </div>
+    </a>
+  </div><!-- /.topnav-left -->
   <div class="topnav-right">
     <% if (typeof user !== 'undefined' && user) { %>
       <div class="topnav-user-pill">
@@ -770,6 +827,54 @@
     <%- body %>
   </main>
 </div>
+
+<!-- Mobile sidebar backdrop -->
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<script>
+  (function () {
+    var toggle    = document.getElementById('sidebarToggle');
+    var backdrop  = document.getElementById('sidebarBackdrop');
+    var sidebar   = document.querySelector('.sidebar');
+    var hamIcon   = document.getElementById('hamburgerIcon');
+    var closeIcon = document.getElementById('closeIcon');
+    if (!toggle || !sidebar) return;
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      backdrop.classList.add('open');
+      toggle.setAttribute('aria-expanded', 'true');
+      hamIcon.style.display   = 'none';
+      closeIcon.style.display = '';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      backdrop.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+      hamIcon.style.display   = '';
+      closeIcon.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+
+    toggle.addEventListener('click', function () {
+      sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+
+    backdrop.addEventListener('click', closeSidebar);
+
+    // Close on nav link click (navigating away)
+    sidebar.querySelectorAll('a.sidebar-link').forEach(function (link) {
+      link.addEventListener('click', closeSidebar);
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeSidebar();
+    });
+  })();
+</script>
 
 </body>
 </html>

@@ -1,0 +1,622 @@
+<%# views/university/charts/employers.ejs %>
+
+<style>
+  /* ── Page layout ─────────────────────────────────────────────────── */
+  .uni-main {
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    background: var(--up-surface);
+  }
+
+  /* ── Breadcrumb ──────────────────────────────────────────────────── */
+  .up-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--up-muted);
+    flex-wrap: wrap;
+  }
+  .up-breadcrumb a {
+    color: var(--up-blue);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+  .up-breadcrumb a:hover { color: #1D4ED8; text-decoration: underline; }
+  .up-breadcrumb-sep { color: var(--up-border); font-size: 14px; }
+  .up-breadcrumb-current { color: var(--up-text-mid); font-weight: 500; }
+
+  /* ── Page header ─────────────────────────────────────────────────── */
+  .up-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .up-page-header-text h1 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--up-text);
+    letter-spacing: -0.3px;
+    line-height: 1.25;
+  }
+  .up-page-header-text p {
+    font-size: 13px;
+    color: var(--up-muted);
+    margin-top: 4px;
+    max-width: 480px;
+  }
+  .up-page-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    background: var(--up-blue-light);
+    color: var(--up-blue);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    border: 1px solid var(--up-blue-lighter);
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+  .up-page-badge svg { width: 12px; height: 12px; }
+
+  /* ── Stat strip ──────────────────────────────────────────────────── */
+  .up-stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 1rem;
+  }
+  .up-stat {
+    background: var(--up-white);
+    border: 1px solid var(--up-border);
+    border-radius: var(--up-radius);
+    padding: 1.1rem 1.25rem;
+    box-shadow: var(--up-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: box-shadow 0.18s, transform 0.18s;
+  }
+  .up-stat:hover {
+    box-shadow: 0 4px 16px rgba(37,99,235,0.1);
+    transform: translateY(-1px);
+  }
+  .up-stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: var(--up-muted);
+  }
+  .up-stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--up-text);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .up-stat-sub {
+    font-size: 11.5px;
+    color: var(--up-muted);
+  }
+  .up-stat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 4px;
+  }
+
+  /* ── Chart card ──────────────────────────────────────────────────── */
+  .up-chart-card {
+    background: var(--up-white);
+    border: 1px solid var(--up-border);
+    border-radius: var(--up-radius);
+    box-shadow: var(--up-shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .up-chart-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--up-border);
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .up-chart-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--up-text);
+    letter-spacing: -0.1px;
+  }
+  .up-chart-card-sub {
+    font-size: 12px;
+    color: var(--up-muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .up-chart-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .up-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--up-border);
+    background: var(--up-white);
+    color: var(--up-text-mid);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .up-btn-icon:hover {
+    border-color: var(--up-blue-400);
+    background: var(--up-blue-light);
+    color: var(--up-blue);
+  }
+  .up-btn-icon svg { width: 13px; height: 13px; }
+
+  /* Toggle buttons */
+  .up-view-toggle {
+    display: flex;
+    background: var(--up-surface);
+    border: 1px solid var(--up-border);
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+  }
+  .up-toggle-btn {
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--up-muted);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .up-toggle-btn.active {
+    background: var(--up-white);
+    color: var(--up-blue);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+
+  /* Chart body */
+  .up-chart-body {
+    padding: 1.5rem;
+    flex: 1;
+    min-height: 0;
+  }
+  .up-chart-wrap {
+    position: relative;
+    height: 400px;
+  }
+
+  /* Footer legend */
+  .up-chart-card-foot {
+    padding: 0.85rem 1.5rem;
+    border-top: 1px solid var(--up-border);
+    background: var(--up-surface);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .up-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--up-muted);
+  }
+  .up-legend-swatch {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .up-legend-foot-note {
+    margin-left: auto;
+    font-size: 11.5px;
+    color: var(--up-muted);
+    font-style: italic;
+  }
+
+  /* Empty state */
+  .up-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    height: 300px;
+    color: var(--up-muted);
+    font-size: 13.5px;
+  }
+  .up-empty-icon {
+    width: 48px; height: 48px;
+    background: var(--up-surface);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--up-blue-400);
+  }
+  .up-empty-icon svg { width: 24px; height: 24px; }
+
+  /* Table view */
+  .up-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .up-table th {
+    text-align: left;
+    padding: 9px 14px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--up-muted);
+    background: var(--up-surface);
+    border-bottom: 1px solid var(--up-border);
+  }
+  .up-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--up-border);
+    color: var(--up-text-mid);
+    vertical-align: middle;
+  }
+  .up-table tr:last-child td { border-bottom: none; }
+  .up-table tr:hover td { background: var(--up-blue-light); transition: background 0.12s; }
+  .up-rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .up-rank-1 { background: #FEF9C3; color: #854D0E; }
+  .up-rank-2 { background: #F1F5F9; color: #475569; }
+  .up-rank-3 { background: #FEF3C7; color: #92400E; }
+  .up-rank-n { background: var(--up-surface); color: var(--up-muted); }
+  .up-bar-mini {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--up-blue);
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 4px;
+  }
+  .up-bar-mini-wrap {
+    width: 100%;
+    max-width: 140px;
+    background: var(--up-surface);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  /* ── Responsive ───────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .uni-main { padding: 1.25rem; gap: 1.25rem; }
+    .up-chart-wrap { height: 300px; }
+  }
+</style>
+
+<div class="uni-shell">
+
+  <%- include('../partials/sidebar', { activePage: 'top-employers' }) %>
+
+  <main class="uni-main">
+
+    <!-- Breadcrumb -->
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Analytics</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span class="up-breadcrumb-current">Top Employers</span>
+    </nav>
+
+    <!-- Page header -->
+    <div class="up-page-header">
+      <div class="up-page-header-text">
+        <h1>Top Employers</h1>
+        <p>The organisations where the most alumni are currently or have previously worked.</p>
+      </div>
+      <span class="up-page-badge" id="lastUpdatedBadge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Live data
+      </span>
+    </div>
+
+    <!-- Stat strip — populated by JS -->
+    <div class="up-stat-row" id="statRow">
+      <div class="up-stat">
+        <div class="up-stat-label">Top Employer</div>
+        <div class="up-stat-value" id="statTopName">—</div>
+        <div class="up-stat-sub" id="statTopCount"></div>
+      </div>
+      <div class="up-stat">
+        <div class="up-stat-label">Total Alumni (Top 10)</div>
+        <div class="up-stat-value" id="statTotal">—</div>
+        <div class="up-stat-sub">across tracked employers</div>
+      </div>
+      <div class="up-stat">
+        <div class="up-stat-label">Avg. per Employer</div>
+        <div class="up-stat-value" id="statAvg">—</div>
+        <div class="up-stat-sub">alumni per top employer</div>
+      </div>
+      <div class="up-stat">
+        <div class="up-stat-label">Employers Tracked</div>
+        <div class="up-stat-value" id="statCount">—</div>
+        <div class="up-stat-sub">in full dataset</div>
+      </div>
+    </div>
+
+    <!-- Chart card -->
+    <div class="up-chart-card">
+
+      <div class="up-chart-card-head">
+        <div>
+          <div class="up-chart-card-title">Alumni Count by Employer</div>
+          <div class="up-chart-card-sub">Showing top 10 — hover bars for detail</div>
+        </div>
+        <div class="up-chart-actions">
+          <div class="up-view-toggle">
+            <button class="up-toggle-btn active" id="btnChart" onclick="showView('chart')">Chart</button>
+            <button class="up-toggle-btn"         id="btnTable" onclick="showView('table')">Table</button>
+          </div>
+          <button class="up-btn-icon" id="btnDownload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export PNG
+          </button>
+        </div>
+      </div>
+
+      <div class="up-chart-body">
+        <!-- Chart view -->
+        <div id="viewChart" class="up-chart-wrap">
+          <canvas id="employersChart"></canvas>
+        </div>
+        <!-- Table view (hidden by default) -->
+        <div id="viewTable" style="display:none; overflow-x:auto;">
+          <table class="up-table" id="employersTable">
+            <thead>
+              <tr>
+                <th style="width:44px">#</th>
+                <th>Employer</th>
+                <th>Alumni</th>
+                <th style="min-width:140px">Share of Top 10</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="up-chart-card-foot">
+        <div class="up-legend-item">
+          <span class="up-legend-swatch" style="background:var(--up-blue)"></span>
+          Alumni count
+        </div>
+        <div class="up-legend-item">
+          <span class="up-legend-swatch" style="background:var(--up-blue-400)"></span>
+          Secondary range
+        </div>
+        <span class="up-legend-foot-note">Data reflects recorded employment history</span>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script>
+(function () {
+  var raw = <%- chartData %>;
+  var chartInstance = null;
+  var currentView   = 'chart';
+
+  /* ── Empty state ── */
+  if (!raw || !raw.length) {
+    document.getElementById('viewChart').innerHTML =
+      '<div class="up-empty">' +
+      '<div class="up-empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>' +
+      'No employer data is available yet.' +
+      '</div>';
+    ['statTopName','statTotal','statAvg','statCount'].forEach(function(id){ document.getElementById(id).textContent = '0'; });
+    return;
+  }
+
+  /* ── Prepare data ── */
+  var sorted   = raw.slice().sort(function (a, b) { return b.count - a.count; });
+  var top10    = sorted.slice(0, 10);
+  var labels   = top10.map(function (d) { return d.company; });
+  var counts   = top10.map(function (d) { return d.count; });
+  var maxVal   = Math.max.apply(null, counts);
+  var total    = counts.reduce(function (s, v) { return s + v; }, 0);
+
+  /* ── Stat strip ── */
+  document.getElementById('statTopName').textContent  = top10[0].company;
+  document.getElementById('statTopCount').textContent = top10[0].count + ' alumni';
+  document.getElementById('statTotal').textContent    = total.toLocaleString();
+  document.getElementById('statAvg').textContent      = Math.round(total / top10.length);
+  document.getElementById('statCount').textContent    = sorted.length.toLocaleString();
+
+  /* ── Blue gradient palette ── */
+  var blueStops = [
+    'rgba(37,99,235,0.90)',
+    'rgba(37,99,235,0.82)',
+    'rgba(59,130,246,0.78)',
+    'rgba(59,130,246,0.70)',
+    'rgba(96,165,250,0.72)',
+    'rgba(96,165,250,0.65)',
+    'rgba(147,197,253,0.72)',
+    'rgba(147,197,253,0.65)',
+    'rgba(186,230,253,0.70)',
+    'rgba(186,230,253,0.60)',
+  ];
+  var bgColors = counts.map(function (_, i) { return blueStops[i] || blueStops[blueStops.length - 1]; });
+  var borderColors = counts.map(function (_, i) {
+    return i === 0 ? 'rgba(29,78,216,1)' : 'rgba(59,130,246,0.4)';
+  });
+
+  /* ── Chart ── */
+  Chart.register(ChartDataLabels);
+  var ctx = document.getElementById('employersChart').getContext('2d');
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Alumni',
+        data:          counts,
+        backgroundColor: bgColors,
+        borderColor:     borderColors,
+        borderWidth:     1.5,
+        borderRadius:    6,
+        borderSkipped:   false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 30 } },
+      animation: {
+        duration: 700,
+        easing:   'easeOutQuart',
+      },
+      plugins: {
+        legend: { display: false },
+        title:  { display: false },
+        tooltip: {
+          backgroundColor: '#0F172A',
+          titleColor:      '#60A5FA',
+          bodyColor:       '#E2E8F0',
+          padding:         12,
+          cornerRadius:    8,
+          borderColor:     'rgba(59,130,246,0.3)',
+          borderWidth:     1,
+          callbacks: {
+            title: function (items) { return labels[items[0].dataIndex]; },
+            label: function (item) {
+              var pct = total > 0 ? ((item.raw / total) * 100).toFixed(1) : 0;
+              return [
+                '  Alumni: ' + item.raw,
+                '  Share of top 10: ' + pct + '%',
+              ];
+            }
+          }
+        },
+        datalabels: {
+          anchor:    'end',
+          align:     'end',
+          offset:    2,
+          color:     '#334155',
+          font:      { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
+          formatter: function (value) { return value; },
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#64748B',
+            font:  { size: 11.5 },
+            callback: function (val, idx) {
+              var lbl = labels[idx];
+              return lbl && lbl.length > 16 ? lbl.slice(0, 14) + '…' : lbl;
+            }
+          },
+          grid:   { display: false },
+          border: { color: 'transparent' },
+        },
+        y: {
+          ticks:  { precision: 0, color: '#94A3B8', font: { size: 11.5 } },
+          grid:   { color: 'rgba(226,232,240,0.8)', drawBorder: false },
+          border: { display: false, dash: [4, 4] },
+          beginAtZero: true,
+          suggestedMax: Math.ceil(maxVal * 1.18),
+        }
+      }
+    }
+  });
+
+  /* ── Table ── */
+  var tbody = document.getElementById('tableBody');
+  top10.forEach(function (d, i) {
+    var pct    = total > 0 ? ((d.count / total) * 100).toFixed(1) : 0;
+    var barPct = maxVal > 0 ? (d.count / maxVal * 100).toFixed(1) : 0;
+    var rankClass = i === 0 ? 'up-rank-1' : i === 1 ? 'up-rank-2' : i === 2 ? 'up-rank-3' : 'up-rank-n';
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><span class="up-rank-badge ' + rankClass + '">' + (i + 1) + '</span></td>' +
+      '<td style="font-weight:600;color:var(--up-text)">' + d.company + '</td>' +
+      '<td style="font-weight:700;color:var(--up-blue)">' + d.count + '</td>' +
+      '<td>' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div class="up-bar-mini-wrap"><div class="up-bar-mini" style="width:' + barPct + '%"></div></div>' +
+          '<span style="font-size:11.5px;color:var(--up-muted);min-width:36px">' + pct + '%</span>' +
+        '</div>' +
+      '</td>';
+    tbody.appendChild(tr);
+  });
+
+  /* ── View toggle ── */
+  window.showView = function (view) {
+    currentView = view;
+    var isChart = view === 'chart';
+    document.getElementById('viewChart').style.display = isChart ? '' : 'none';
+    document.getElementById('viewTable').style.display = isChart ? 'none' : '';
+    document.getElementById('btnChart').classList.toggle('active', isChart);
+    document.getElementById('btnTable').classList.toggle('active', !isChart);
+    if (isChart && chartInstance) chartInstance.resize();
+  };
+
+  /* ── Export ── */
+  document.getElementById('btnDownload').addEventListener('click', function () {
+    if (currentView === 'table') {
+      /* CSV export for table view */
+      var rows = [['Rank','Employer','Alumni','Share (%)']];
+      top10.forEach(function (d, i) {
+        var pct = total > 0 ? ((d.count / total) * 100).toFixed(1) : 0;
+        rows.push([i + 1, '"' + d.company + '"', d.count, pct]);
+      });
+      var csv  = rows.map(function (r) { return r.join(','); }).join('\n');
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var url  = URL.createObjectURL(blob);
+      var a    = document.createElement('a'); a.href = url; a.download = 'top-employers.csv'; a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      var a    = document.createElement('a');
+      a.href   = chartInstance.toBase64Image('image/png', 1);
+      a.download = 'top-employers.png';
+      a.click();
+    }
+  });
+})();
+</script>

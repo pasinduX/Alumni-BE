@@ -26,11 +26,16 @@ const router = Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [label]
+ *             required: [client_name]
  *             properties:
- *               label:
+ *               client_name:
  *                 type: string
  *                 example: "AR App Production"
+ *               permissions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["read:alumni_of_day"]
  *     responses:
  *       201:
  *         description: Key created — plain-text key returned once only
@@ -44,15 +49,28 @@ const router = Router();
  *                   example: "ak_a1b2c3..."
  *                 id:
  *                   type: string
- *                 label:
+ *                 client_name:
  *                   type: string
+ *                 permissions:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 is_active:
+ *                   type: boolean
  *                 created_at:
  *                   type: string
  *                   format: date-time
  *       401:
  *         description: Unauthorized
  */
-router.post("/developer/keys/generate", requireLogin, body("label").notEmpty(), handleValidationErrors, generateKey);
+router.post(
+  "/developer/keys/generate",
+  requireLogin,
+  body("client_name").notEmpty(),
+  body("permissions").optional().isArray(),
+  handleValidationErrors,
+  generateKey
+);
 
 /**
  * @openapi
@@ -76,15 +94,14 @@ router.post("/developer/keys/generate", requireLogin, body("label").notEmpty(), 
  *                     properties:
  *                       id:
  *                         type: string
- *                       label:
+ *                       client_name:
  *                         type: string
- *                       is_revoked:
+ *                       permissions:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       is_active:
  *                         type: boolean
- *                       usage_count:
- *                         type: integer
- *                       last_used_at:
- *                         type: string
- *                         format: date-time
  *                       created_at:
  *                         type: string
  *                         format: date-time
@@ -116,9 +133,15 @@ router.get("/developer/keys", requireLogin, listKeys);
  *               properties:
  *                 id:
  *                   type: string
- *                 usage_count:
- *                   type: integer
- *                 last_used_at:
+ *                 client_name:
+ *                   type: string
+ *                 permissions:
+ *                   type: array
+ *                   items:
+ *                     type: string
+ *                 is_active:
+ *                   type: boolean
+ *                 created_at:
  *                   type: string
  *                   format: date-time
  *                 logs:

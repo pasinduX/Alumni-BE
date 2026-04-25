@@ -18,6 +18,8 @@ export const config = {
   },
   allowedDomain: process.env.ALLOWED_DOMAIN ?? "eastminster.ac.uk",
   allowedOrigins: process.env.ALLOWED_ORIGINS?.split(",") ?? ["*"],
+  // Origin of the university dashboard front-end (used for CORS on /api routes)
+  universityDashboardOrigin: process.env.UNIVERSITY_DASHBOARD_ORIGIN ?? "http://localhost:3000",
   uploadDir: process.env.UPLOAD_DIR ?? "./uploads",
   bidding: {
     monthlyLimit: 3,

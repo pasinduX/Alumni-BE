@@ -1,0 +1,198 @@
+<%# views/university/charts/skills-gap.ejs %>
+
+<style>
+  .uni-main {
+    flex: 1;
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    background: var(--up-surface);
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); flex-wrap:wrap; }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; transition:color 0.15s; }
+  .up-breadcrumb a:hover { color:#1D4ED8; text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); font-size:14px; }
+  .up-breadcrumb-current { color:var(--up-text-mid); font-weight:500; }
+
+  .up-page-header-text h1 { font-size:1.45rem; font-weight:700; color:var(--up-text); letter-spacing:-0.3px; }
+  .up-page-header-text p  { font-size:13px; color:var(--up-muted); margin-top:4px; }
+
+  .up-chart-card {
+    background: var(--up-white);
+    border: 1px solid var(--up-border);
+    border-radius: var(--up-radius);
+    box-shadow: var(--up-shadow);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  .up-chart-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--up-border);
+    gap: 1rem; flex-wrap: wrap;
+  }
+  .up-chart-card-title { font-size:14px; font-weight:700; color:var(--up-text); }
+  .up-chart-card-sub   { font-size:12px; color:var(--up-muted); margin-top:2px; }
+  .up-btn-icon {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:6px 12px; border-radius:8px; border:1px solid var(--up-border);
+    background:var(--up-white); color:var(--up-text-mid); font-size:12px;
+    font-weight:600; cursor:pointer; text-decoration:none;
+    transition:all 0.15s;
+  }
+  .up-btn-icon:hover { border-color:var(--up-blue-400); background:var(--up-blue-light); color:var(--up-blue); }
+  .up-btn-icon svg { width:13px; height:13px; }
+  .up-chart-body { padding:1.5rem; flex:1; }
+  .up-chart-wrap { position:relative; height:520px; }
+  .up-empty {
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:10px; height:300px;
+    color:var(--up-muted); font-size:13.5px;
+  }
+
+  @media (max-width: 900px) {
+    .uni-main { padding:1.25rem; }
+    .up-chart-wrap { height:380px; }
+  }
+</style>
+
+<div class="uni-shell">
+
+  <%- include('../partials/sidebar', { activePage: 'skills-gap' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Analytics</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span class="up-breadcrumb-current">Skills Gap</span>
+    </nav>
+
+    <div class="up-page-header-text">
+      <h1>Skills Gap Analysis</h1>
+      <p>Top 20 certifications and professional courses completed by alumni in the past 12 months.</p>
+    </div>
+
+    <div class="up-chart-card">
+      <div class="up-chart-card-head">
+        <div>
+          <div class="up-chart-card-title">Certification &amp; Course Frequency</div>
+          <div class="up-chart-card-sub">Ranked by number of alumni completions</div>
+        </div>
+        <button class="up-btn-icon" id="btnDownload">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export PNG
+        </button>
+      </div>
+      <div class="up-chart-body">
+        <div class="up-chart-wrap">
+          <canvas id="skillsGapChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var raw = <%- chartData %>;
+
+  if (!raw || !raw.length) {
+    document.querySelector('.up-chart-wrap').innerHTML =
+      '<div class="up-empty">No data available yet.</div>';
+    return;
+  }
+
+  var labels = raw.map(function (d) { return d.provider ? d.title + ' (' + d.provider + ')' : d.title; });
+  var counts = raw.map(function (d) { return d.count; });
+  var maxVal  = Math.max.apply(null, counts);
+
+  /* Blue gradient: deeper blue for top entries, lighter for lower */
+  var bgColors = counts.map(function (v, i) {
+    var t = counts.length > 1 ? 1 - (i / (counts.length - 1)) : 1;
+    var alpha = 0.45 + t * 0.45;
+    return 'rgba(37,99,235,' + alpha.toFixed(2) + ')';
+  });
+
+  var ctx = document.getElementById('skillsGapChart').getContext('2d');
+  var chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Alumni completions',
+        data:  counts,
+        backgroundColor: bgColors,
+        borderColor:     'rgba(29,78,216,0.7)',
+        borderWidth: 1,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 650, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        title:  { display: false },
+        tooltip: {
+          backgroundColor: '#0F172A',
+          titleColor:      '#60A5FA',
+          bodyColor:       '#E2E8F0',
+          padding:         12,
+          cornerRadius:    8,
+          borderColor:     'rgba(59,130,246,0.3)',
+          borderWidth:     1,
+          callbacks: {
+            title: function (items) { return items[0].label; },
+            label: function (item) { return '  Completions: ' + item.raw; },
+            afterLabel: function (item) {
+              var d = raw[item.dataIndex];
+              return d.provider ? '  Provider: ' + d.provider : '';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display:true, text:'Number of Completions', font:{ size:12, weight:'500' }, color:'#94A3B8', padding:{ top:8 } },
+          ticks:  { precision:0, color:'#94A3B8', font:{ size:11.5 } },
+          grid:   { color:'rgba(226,232,240,0.8)' },
+          border: { display:false },
+        },
+        y: {
+          ticks: {
+            color: '#334155', font: { size: 11.5 },
+            callback: function (val, idx) {
+              var lbl = labels[idx];
+              return lbl.length > 40 ? lbl.slice(0, 38) + '…' : lbl;
+            }
+          },
+          grid:   { display: false },
+          border: { display: false },
+        }
+      }
+    }
+  });
+
+  document.getElementById('btnDownload').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href     = chartInstance.toBase64Image('image/png', 1);
+    a.download = 'skills-gap.png';
+    a.click();
+  });
+})();
+</script>

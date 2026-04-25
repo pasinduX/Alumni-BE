@@ -12,10 +12,12 @@ import swaggerUi from "swagger-ui-express";
 import { config } from "./config";
 import apiRouter from "./routes";
 import webRouter from "./routes/webRoutes";
-import { globalLimiter } from "./middleware/rateLimiter";
+import universityRouter from "./routes/university";
+import { globalLimiter, authLimiter, apiLimiter } from "./middleware/rateLimiter";
 import { requestLogger } from "./middleware/logger";
 import { swaggerSpec } from "./swagger";
 import { startWinnerScheduler } from "./jobs/winnerSelector";
+import { startMonthlyBidWinnerJob } from "./jobs/monthlyBidWinner";
 import { AppError } from "./utils/AppError";
 
 const app = express();
@@ -39,10 +41,14 @@ app.use(
     },
   }),
 );
+// CORS — only the university dashboard origin is permitted on /api and /university routes.
+// All other origins are blocked by the absence of CORS headers.
 app.use(
   cors({
-    origin: config.allowedOrigins,
+    origin: config.universityDashboardOrigin,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   }),
 );
 app.use(cookieParser());
@@ -53,20 +59,25 @@ app.use(session({
   cookie: { httpOnly: true, secure: process.env.NODE_ENV === "production" },
 }));
 
+// ── Rate limiting ───────────────────────────────────────────────────────────
+// /auth  : strict limit — 10 requests per 15 minutes (brute-force protection)
+// /api   : standard limit — 100 requests per 15 minutes
+// everything else falls back to globalLimiter
+app.use("/auth", authLimiter);
+app.use("/api",  apiLimiter);
 app.use(globalLimiter);
+
 app.use(requestLogger);
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true }));
 
+// ── CSRF protection ─────────────────────────────────────────────────────────
+// Applied only to web form routes (/web and /university).
+// Pure JSON API routes (/auth, /api, /profile, etc.) are excluded.
 app.use((req, res, next) => {
-  if (process.env.NODE_ENV !== "production") {
-    if (req.path.startsWith("/api-docs")) {
-      return next();
-    }
-    if (req.path === "/auth/login" && req.get("x-no-csrf") === "1") {
-      return next();
-    }
-  }
+  const isWebRoute =
+    req.path.startsWith("/web") || req.path.startsWith("/university");
+  if (!isWebRoute) return next();
   return csurf({ cookie: true })(req, res, next);
 });
 
@@ -89,7 +100,9 @@ app.use((req, res, next) => {
 });
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
+app.get("/", (_req, res) => res.redirect("/web/login"));
 app.use("/web", webRouter);
+app.use("/university", universityRouter);
 app.use("/", apiRouter);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -137,5 +150,6 @@ export const startServer = () => {
   app.listen(port, () => {
     console.log(`🚀 Server listening on http://localhost:${port}`);
     startWinnerScheduler();
+    startMonthlyBidWinnerJob();
   });
 };

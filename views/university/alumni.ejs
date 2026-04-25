@@ -1,0 +1,287 @@
+<%# views/university/alumni.ejs %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem; overflow-y: auto;
+    background: var(--up-surface);
+    display: flex; flex-direction: column; gap: 1.25rem;
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  /* Breadcrumb */
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; }
+  .up-breadcrumb a:hover { color:#1D4ED8; text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); }
+  .up-breadcrumb-current { color:var(--up-text-mid); font-weight:500; }
+
+  /* Page header */
+  .page-header h2 { font-size:1.45rem; font-weight:700; color:var(--up-text); letter-spacing:-0.3px; }
+  .page-header p  { font-size:13px; color:var(--up-muted); margin-top:3px; }
+
+  /* Filter card */
+  .filter-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1.1rem 1.25rem; box-shadow: var(--up-shadow);
+  }
+  .filter-row { display:flex; flex-wrap:wrap; gap:0.75rem; align-items:flex-end; }
+  .filter-group { display:flex; flex-direction:column; gap:4px; flex:1; min-width:150px; }
+  .filter-group label {
+    font-size:10.5px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.6px; color:var(--up-muted);
+  }
+  .filter-group input {
+    height:35px; padding:0 0.75rem;
+    border:1px solid var(--up-border); border-radius:8px;
+    font-size:13px; color:var(--up-text); background:var(--up-white);
+    outline:none; transition:border-color 0.15s, box-shadow 0.15s;
+    font-family: var(--font-body);
+  }
+  .filter-group input:focus { border-color:var(--up-blue); box-shadow:0 0 0 3px rgba(37,99,235,0.1); }
+  .filter-group input::placeholder { color:var(--up-muted); }
+  .filter-actions { display:flex; gap:0.5rem; align-items:flex-end; }
+  .btn-filter {
+    height:35px; padding:0 1.1rem; border-radius:8px;
+    font-size:13px; font-weight:600; cursor:pointer; border:none;
+    transition:all 0.15s; font-family:var(--font-body);
+  }
+  .btn-filter-primary  { background:var(--up-blue); color:#fff; }
+  .btn-filter-primary:hover { background:#1D4ED8; }
+  .btn-filter-secondary {
+    background:var(--up-surface); color:var(--up-text-mid);
+    border:1px solid var(--up-border) !important; text-decoration:none;
+    display:inline-flex; align-items:center;
+  }
+  .btn-filter-secondary:hover { background:var(--up-border); }
+
+  /* Result meta */
+  .result-meta { font-size:12.5px; color:var(--up-muted); }
+  .result-meta strong { color:var(--up-text); }
+
+  /* Table */
+  .alumni-table-wrap {
+    background:var(--up-white); border:1px solid var(--up-border);
+    border-radius:var(--up-radius); box-shadow:var(--up-shadow); overflow:hidden;
+  }
+  .alumni-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .alumni-table thead {
+    background: var(--up-surface);
+    border-bottom: 1px solid var(--up-border);
+  }
+  .alumni-table th {
+    padding:0.7rem 1rem; text-align:left; font-size:10.5px;
+    font-weight:700; text-transform:uppercase; letter-spacing:0.7px;
+    color:var(--up-muted); white-space:nowrap;
+  }
+  .alumni-table tbody tr { border-bottom:1px solid var(--up-border); transition:background 0.1s; }
+  .alumni-table tbody tr:last-child { border-bottom:none; }
+  .alumni-table tbody tr:hover { background:var(--up-blue-light); }
+  .alumni-table td { padding:0.72rem 1rem; color:var(--up-text-mid); vertical-align:middle; }
+  .alumni-table td.muted { color:var(--up-muted); font-style:italic; }
+  .alumni-name { font-weight:600; color:var(--up-text); }
+  .view-link {
+    font-size:12px; color:var(--up-blue); text-decoration:none;
+    font-weight:600; white-space:nowrap;
+    padding:3px 8px; border-radius:6px; border:1px solid var(--up-blue-lighter);
+    background:var(--up-blue-light); transition:all 0.15s;
+  }
+  .view-link:hover { background:var(--up-blue-lighter); border-color:var(--up-blue-400); }
+
+  /* Empty state */
+  .empty-state { padding:3.5rem 2rem; text-align:center; color:var(--up-muted); font-size:13.5px; }
+  .empty-state svg {
+    width:44px; height:44px; stroke:var(--up-border);
+    margin:0 auto 0.75rem; display:block;
+  }
+
+  /* Pagination */
+  .pagination {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0.85rem 1rem; border-top:1px solid var(--up-border);
+    font-size:12.5px; color:var(--up-muted);
+  }
+  .pagination-links { display:flex; gap:4px; }
+  .page-btn {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-width:32px; height:32px; padding:0 8px; border-radius:7px;
+    text-decoration:none; font-size:12.5px; font-weight:500;
+    color:var(--up-text-mid); border:1px solid var(--up-border);
+    background:var(--up-white); transition:all 0.12s;
+  }
+  .page-btn:hover { border-color:var(--up-blue-400); color:var(--up-blue); background:var(--up-blue-light); }
+  .page-btn.active { background:var(--up-blue); color:#fff; border-color:var(--up-blue); font-weight:700; }
+  .page-btn.disabled { opacity:0.35; pointer-events:none; }
+
+  @media (max-width: 900px) { .uni-main { padding:1.25rem; } }
+</style>
+
+<div class="uni-shell">
+
+  <%- include('./partials/sidebar', { activePage: 'alumni' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span class="up-breadcrumb-current">Alumni Directory</span>
+    </nav>
+
+    <div class="page-header">
+      <h2>Alumni Directory</h2>
+      <p>Search and filter the full alumni database.</p>
+    </div>
+
+    <%# ── Filter form ── %>
+    <div class="filter-card">
+      <form method="GET" action="/university/alumni">
+        <div class="filter-row">
+
+          <div class="filter-group">
+            <label for="programme">Programme</label>
+            <input
+              type="text"
+              id="programme"
+              name="programme"
+              value="<%= filters.programme %>"
+              placeholder="e.g. Computer Science"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label for="graduation_year">Graduation Year</label>
+            <input
+              type="number"
+              id="graduation_year"
+              name="graduation_year"
+              value="<%= filters.graduation_year %>"
+              placeholder="e.g. 2022"
+              min="1950"
+              max="2100"
+            />
+          </div>
+
+          <div class="filter-group">
+            <label for="industry_sector">Industry Sector</label>
+            <input
+              type="text"
+              id="industry_sector"
+              name="industry_sector"
+              value="<%= filters.industry_sector %>"
+              placeholder="e.g. Software Engineering"
+            />
+          </div>
+
+          <div class="filter-actions">
+            <button type="submit" class="btn-filter btn-filter-primary">Search</button>
+            <a href="/university/alumni" class="btn-filter btn-filter-secondary">Clear</a>
+          </div>
+
+        </div>
+      </form>
+    </div>
+
+    <%# ── Result count ── %>
+    <% if (pagination.total !== undefined) { %>
+      <p class="result-meta">
+        Showing
+        <strong><%= alumni.length %></strong>
+        of
+        <strong><%= pagination.total %></strong>
+        alumni
+        <% if (filters.programme || filters.graduation_year || filters.industry_sector) { %>
+          matching your filters
+        <% } %>
+      </p>
+    <% } %>
+
+    <%# ── Table ── %>
+    <div class="alumni-table-wrap">
+      <% if (alumni.length === 0) { %>
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          No alumni found.<% if (filters.programme || filters.graduation_year || filters.industry_sector) { %> Try adjusting your filters.<% } %>
+        </div>
+      <% } else { %>
+        <table class="alumni-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Programme</th>
+              <th>Grad. Year</th>
+              <th>Current Role</th>
+              <th>Current Employer</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% alumni.forEach(function (a) {
+              var programme   = (a.degrees && a.degrees.length)
+                                  ? a.degrees[0].title
+                                  : (filters.programme || '—');
+              var gradYear    = (a.degrees && a.degrees.length && a.degrees[0].completed_at)
+                                  ? new Date(a.degrees[0].completed_at).getFullYear()
+                                  : '—';
+              var currentJob  = (a.employment_history && a.employment_history.length)
+                                  ? a.employment_history.find(function(e){ return e.is_current; })
+                                    || a.employment_history[0]
+                                  : null;
+              var currentRole     = currentJob ? (currentJob.role     || '—') : '—';
+              var currentEmployer = currentJob ? (currentJob.company  || '—') : '—';
+            %>
+            <tr>
+              <td class="alumni-name"><%= a.full_name || '—' %></td>
+              <td><%= a.email %></td>
+              <td><%= programme %></td>
+              <td><%= gradYear %></td>
+              <td><%= currentRole %></td>
+              <td><%= currentEmployer %></td>
+              <td>
+                <a href="/university/alumni/<%= a.user_id %>" class="view-link">View ›</a>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+
+        <%# ── Pagination ── %>
+        <% if (pagination.totalPages > 1) {
+          var currentPage  = pagination.page;
+          var totalPages   = pagination.totalPages;
+
+          // Build base query string preserving filters
+          var baseQs = '';
+          if (filters.programme)       baseQs += '&programme='       + encodeURIComponent(filters.programme);
+          if (filters.graduation_year) baseQs += '&graduation_year=' + encodeURIComponent(filters.graduation_year);
+          if (filters.industry_sector) baseQs += '&industry_sector=' + encodeURIComponent(filters.industry_sector);
+        %>
+        <div class="pagination">
+          <span>Page <%= currentPage %> of <%= totalPages %></span>
+          <div class="pagination-links">
+
+            <a href="?page=<%= currentPage - 1 %><%= baseQs %>"
+               class="page-btn <%= currentPage <= 1 ? 'disabled' : '' %>">‹</a>
+
+            <% for (var p = Math.max(1, currentPage - 2); p <= Math.min(totalPages, currentPage + 2); p++) { %>
+              <a href="?page=<%= p %><%= baseQs %>"
+                 class="page-btn <%= p === currentPage ? 'active' : '' %>"><%= p %></a>
+            <% } %>
+
+            <a href="?page=<%= currentPage + 1 %><%= baseQs %>"
+               class="page-btn <%= currentPage >= totalPages ? 'disabled' : '' %>">›</a>
+
+          </div>
+        </div>
+        <% } %>
+
+      <% } %>
+    </div>
+
+  </main>
+</div>

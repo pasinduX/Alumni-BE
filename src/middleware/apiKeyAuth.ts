@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
+import crypto from "crypto";
 import * as apiKeyModel from "../models/apiKeyModel";
 
 export interface APIRequest extends Request {
@@ -16,21 +16,19 @@ export async function apiKeyAuth(req: APIRequest, res: Response, next: NextFunct
   }
 
   try {
-    const activeKeys = await apiKeyModel.findAllActiveApiKeys();
+    const keyHash = crypto.createHash("sha256").update(token).digest("hex");
+    const key = await apiKeyModel.findActiveApiKeyByHash(keyHash);
 
-    for (const key of activeKeys) {
-      const match = await bcrypt.compare(token, key.key_hash);
-      if (match) {
-        req.apiKeyId = key.id;
-        req.apiUserId = key.user_id;
-        apiKeyModel.touchApiKey(key.id).catch(() => {});
-        apiKeyModel.logApiKeyAccess(key.id, req.originalUrl).catch(() => {});
-
-        return next();
-      }
+    if (!key) {
+      return res.status(401).json({ error: "Invalid or revoked API key" });
     }
 
-    return res.status(401).json({ error: "Invalid or revoked API key" });
+    req.apiKeyId = key.id;
+    req.apiUserId = key.user_id;
+    apiKeyModel.touchApiKey(key.id).catch(() => {});
+    apiKeyModel.logApiKeyAccess(key.id, req.originalUrl, req.method, 200).catch(() => {});
+
+    return next();
   } catch (err) {
     next(err);
   }

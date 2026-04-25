@@ -1,0 +1,259 @@
+<%# views/university/charts/employment.ejs %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem;
+    display: flex; flex-direction: column; gap: 1.5rem;
+    background: var(--up-surface);
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; }
+  .up-breadcrumb a:hover { color:#1D4ED8; text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); }
+  .up-breadcrumb-current { color:var(--up-text-mid); font-weight:500; }
+
+  .up-page-header-text h1 { font-size:1.45rem; font-weight:700; color:var(--up-text); letter-spacing:-0.3px; }
+  .up-page-header-text p  { font-size:13px; color:var(--up-muted); margin-top:4px; }
+
+  .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; }
+  @media (max-width: 900px) { .charts-grid { grid-template-columns:1fr; } .uni-main { padding:1.25rem; } }
+
+  .up-chart-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); box-shadow: var(--up-shadow);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .up-chart-card-head {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:1.1rem 1.25rem; border-bottom:1px solid var(--up-border);
+    gap:1rem; flex-wrap:wrap;
+  }
+  .up-chart-card-title { font-size:13.5px; font-weight:700; color:var(--up-text); }
+  .up-btn-icon {
+    display:inline-flex; align-items:center; gap:5px; padding:5px 10px;
+    border-radius:7px; border:1px solid var(--up-border); background:var(--up-white);
+    color:var(--up-text-mid); font-size:11.5px; font-weight:600; cursor:pointer;
+    transition:all 0.15s;
+  }
+  .up-btn-icon:hover { border-color:var(--up-blue-400); background:var(--up-blue-light); color:var(--up-blue); }
+  .up-btn-icon svg { width:12px; height:12px; }
+  .up-chart-body  { padding:1.25rem; flex:1; }
+  .up-chart-wrap  { position:relative; min-height:340px; flex:1; display:flex; align-items:center; justify-content:center; }
+  .up-chart-wrap canvas { max-width:100%; }
+  .up-empty { color:var(--up-muted); font-size:13px; text-align:center; padding:3rem 0; width:100%; }
+</style>
+
+<div class="uni-shell">
+
+  <%- include('../partials/sidebar', { activePage: 'employment-by-sector' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Analytics</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span class="up-breadcrumb-current">Employment</span>
+    </nav>
+
+    <div class="up-page-header-text">
+      <h1>Employment Analytics</h1>
+      <p>Sector distribution and top job titles across all alumni employment records.</p>
+    </div>
+
+    <div class="charts-grid">
+
+      <div class="up-chart-card">
+        <div class="up-chart-card-head">
+          <div class="up-chart-card-title">Employment by Sector</div>
+          <button class="up-btn-icon" id="btnDownloadSector">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export
+          </button>
+        </div>
+        <div class="up-chart-body">
+          <div class="up-chart-wrap">
+            <canvas id="sectorChart"></canvas>
+            <div id="sectorEmpty" class="up-empty" style="display:none;">No sector data available yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="up-chart-card">
+        <div class="up-chart-card-head">
+          <div class="up-chart-card-title">Top 15 Job Titles</div>
+          <button class="up-btn-icon" id="btnDownloadTitles">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export
+          </button>
+        </div>
+        <div class="up-chart-body">
+          <div class="up-chart-wrap">
+            <canvas id="titlesChart"></canvas>
+            <div id="titlesEmpty" class="up-empty" style="display:none;">No job title data available yet.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  /* Blue sequential palette for doughnut */
+  var PALETTE = [
+    '#2563EB','#3B82F6','#60A5FA','#93C5FD','#1D4ED8',
+    '#1E40AF','#BFDBFE','#7DD3FC','#0EA5E9','#38BDF8',
+    '#0284C7','#0369A1','#BAE6FD','#075985','#0C4A6E',
+    '#2DD4BF','#14B8A6','#0F766E','#5EEAD4','#99F6E4',
+  ];
+
+  var tooltipDefaults = {
+    backgroundColor: '#0F172A',
+    titleColor:      '#60A5FA',
+    bodyColor:       '#E2E8F0',
+    padding:         12,
+    cornerRadius:    8,
+    borderColor:     'rgba(59,130,246,0.3)',
+    borderWidth:     1,
+  };
+
+  /* ── Doughnut: sector ── */
+  var sectorRaw = <%- sectorData %>;
+  if (!sectorRaw || !sectorRaw.length) {
+    document.getElementById('sectorChart').style.display = 'none';
+    document.getElementById('sectorEmpty').style.display = 'block';
+  } else {
+    var sectorLabels = sectorRaw.map(function (d) { return d.sector; });
+    var sectorCounts = sectorRaw.map(function (d) { return d.count; });
+    var total        = sectorCounts.reduce(function (s, v) { return s + v; }, 0);
+
+    var sectorChartInstance = new Chart(
+      document.getElementById('sectorChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: sectorLabels,
+        datasets: [{
+          data:            sectorCounts,
+          backgroundColor: sectorLabels.map(function (_, i) { return PALETTE[i % PALETTE.length]; }),
+          borderColor:     '#F1F5F9',
+          borderWidth:     2,
+          hoverOffset:     8,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '58%',
+        animation: { duration: 650, easing: 'easeOutQuart' },
+        plugins: {
+          legend: {
+            position: 'right',
+            labels: {
+              boxWidth:13, padding:14, font:{ size:11.5 }, color:'#334155',
+              generateLabels: function (chart) {
+                return Chart.overrides.doughnut.plugins.legend.labels
+                  .generateLabels(chart)
+                  .map(function (item) {
+                    if (item.text && item.text.length > 22) item.text = item.text.slice(0,20) + '…';
+                    return item;
+                  });
+              }
+            }
+          },
+          title: { display:false },
+          tooltip: Object.assign({}, tooltipDefaults, {
+            callbacks: {
+              label: function (item) {
+                var pct = total > 0 ? ((item.raw / total) * 100).toFixed(1) : 0;
+                return '  ' + item.label + ': ' + item.raw + ' (' + pct + '%)';
+              }
+            }
+          })
+        }
+      }
+    });
+  }
+
+  /* ── Horizontal bar: job titles ── */
+  var titlesRaw = <%- titlesData %>;
+  if (!titlesRaw || !titlesRaw.length) {
+    document.getElementById('titlesChart').style.display = 'none';
+    document.getElementById('titlesEmpty').style.display = 'block';
+  } else {
+    var titleLabels = titlesRaw.map(function (d) { return d.role; });
+    var titleCounts = titlesRaw.map(function (d) { return d.count; });
+    var maxT = Math.max.apply(null, titleCounts);
+
+    var barColors = titleCounts.map(function (v, i) {
+      var t = titleCounts.length > 1 ? 1 - (i / (titleCounts.length - 1)) : 1;
+      return 'rgba(37,99,235,' + (0.45 + t * 0.45).toFixed(2) + ')';
+    });
+
+    var titlesChartInstance = new Chart(
+      document.getElementById('titlesChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: titleLabels,
+        datasets: [{
+          label: 'Alumni in role',
+          data:  titleCounts,
+          backgroundColor: barColors,
+          borderColor:     'rgba(29,78,216,0.7)',
+          borderWidth: 1, borderRadius: 4, borderSkipped: false,
+        }]
+      },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        animation: { duration: 650, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display:false },
+          title:  { display:false },
+          tooltip: Object.assign({}, tooltipDefaults, {
+            callbacks: { label: function (item) { return '  Alumni: ' + item.raw; } }
+          })
+        },
+        scales: {
+          x: {
+            title: { display:true, text:'Number of Alumni', font:{ size:12, weight:'500' }, color:'#94A3B8', padding:{ top:8 } },
+            ticks:  { precision:0, color:'#94A3B8', font:{ size:11.5 } },
+            grid:   { color:'rgba(226,232,240,0.8)' },
+            border: { display:false },
+          },
+          y: {
+            ticks: {
+              color:'#334155', font:{ size:11.5 },
+              callback: function (val, idx) {
+                var lbl = titleLabels[idx];
+                return lbl && lbl.length > 28 ? lbl.slice(0,26) + '…' : lbl;
+              }
+            },
+            grid:{ display:false }, border:{ display:false },
+          }
+        }
+      }
+    });
+  }
+
+  function dlPng(instance, filename) {
+    var a = document.createElement('a');
+    a.href = instance.toBase64Image('image/png', 1);
+    a.download = filename; a.click();
+  }
+  var btnSector = document.getElementById('btnDownloadSector');
+  if (btnSector) btnSector.addEventListener('click', function () { dlPng(sectorChartInstance, 'employment-by-sector.png'); });
+  var btnTitles = document.getElementById('btnDownloadTitles');
+  if (btnTitles) btnTitles.addEventListener('click', function () { dlPng(titlesChartInstance, 'job-titles.png'); });
+})();
+</script>

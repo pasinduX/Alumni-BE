@@ -8,8 +8,16 @@ export async function generateKey(req: SessionRequest, res: Response, next: Next
     const userId = req.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const { label } = req.body;
-    const result = await generateApiKey(userId, label);
+    const clientName = req.body.client_name || req.body.label;
+    const permissions = Array.isArray(req.body.permissions)
+      ? req.body.permissions.map(String)
+      : [];
+
+    if (!clientName) {
+      return res.status(400).json({ error: "client_name is required" });
+    }
+
+    const result = await generateApiKey(userId, clientName, permissions);
     return res.status(201).json(result);
   } catch (err) {
     next(err);

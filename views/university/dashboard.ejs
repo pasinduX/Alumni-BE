@@ -1,0 +1,462 @@
+<%- /* views/university/dashboard.ejs */ %>
+
+<style>
+  /* ── University Portal: Blue & White Design System ──────────────── */
+  :root {
+    --up-navy:         #0C1E3E;
+    --up-navy-700:     #162B52;
+    --up-blue:         #2563EB;
+    --up-blue-500:     #3B82F6;
+    --up-blue-400:     #60A5FA;
+    --up-blue-light:   #EFF6FF;
+    --up-blue-lighter: #DBEAFE;
+    --up-surface:      #F1F5F9;
+    --up-surface-mid:  #E8EFF8;
+    --up-border:       #E2E8F0;
+    --up-text:         #0F172A;
+    --up-text-mid:     #334155;
+    --up-muted:        #64748B;
+    --up-white:        #FFFFFF;
+    --up-danger:       #EF4444;
+    --up-shadow:       0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    --up-shadow-blue:  0 4px 14px rgba(37,99,235,0.35);
+    --up-radius:       10px;
+    --up-sidebar-w:    260px;
+  }
+
+  .main { max-width: none !important; padding: 0 !important; }
+
+  /* ── Override topnav for university portal ── */
+  .topnav { background: #0C1E3E !important; border-bottom: 1px solid rgba(37,99,235,0.35) !important; box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important; }
+  .topnav-brand-mark { background: linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%) !important; box-shadow: 0 2px 8px rgba(37,99,235,0.45) !important; }
+  .topnav-brand-sub  { color: rgba(147,197,253,0.7) !important; }
+  .btn-nav.primary   { background: linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%) !important; box-shadow: 0 2px 8px rgba(37,99,235,0.4) !important; }
+  .btn-nav.primary:hover { background: linear-gradient(135deg,#3B82F6 0%,#2563EB 100%) !important; }
+
+  /* ── Shell ─────────────────────────────────────────────────────── */
+  .uni-shell {
+    display: flex;
+    min-height: calc(100vh - var(--nav-h));
+    background: var(--up-surface);
+  }
+
+  /* ── Sidebar ────────────────────────────────────────────────────── */
+  .uni-sidebar {
+    width: var(--up-sidebar-w);
+    flex-shrink: 0;
+    background: var(--up-navy);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: var(--nav-h);
+    height: calc(100vh - var(--nav-h));
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+    scrollbar-width: none;
+  }
+  .uni-sidebar::-webkit-scrollbar { display: none; }
+
+  .uni-sidebar-brand {
+    padding: 1.4rem 1.25rem 1.2rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 0.25rem;
+    flex-shrink: 0;
+  }
+  .uni-sidebar-brand-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--up-blue) 0%, #1D4ED8 100%);
+    box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+    margin-bottom: 0.75rem;
+  }
+  .uni-sidebar-brand-badge svg { width: 16px; height: 16px; color: #fff; }
+  .uni-sidebar-brand-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--up-white); letter-spacing: 0.1px; line-height: 1.3;
+  }
+  .uni-sidebar-brand-sub {
+    font-size: 10.5px; color: rgba(255,255,255,0.35);
+    margin-top: 2px; letter-spacing: 0.8px;
+    text-transform: uppercase; font-weight: 500;
+  }
+  .uni-sidebar-label {
+    display: block;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: rgba(255,255,255,0.28);
+    padding: 1.1rem 1.25rem 0.35rem; flex-shrink: 0;
+  }
+  .uni-nav-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 0.58rem 1rem; margin: 1px 0.6rem;
+    border-radius: 8px; color: rgba(255,255,255,0.55);
+    text-decoration: none; font-size: 13px; font-weight: 500;
+    letter-spacing: 0.1px; flex-shrink: 0;
+    transition: color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .uni-nav-link:hover {
+    color: rgba(255,255,255,0.92);
+    background: rgba(255,255,255,0.07);
+    transform: translateX(3px);
+  }
+  .uni-nav-link.active {
+    color: var(--up-white); background: var(--up-blue);
+    box-shadow: var(--up-shadow-blue); transform: translateX(0);
+  }
+  .uni-nav-link svg { width: 15px; height: 15px; flex-shrink: 0; opacity: 0.65; transition: opacity 0.15s; }
+  .uni-nav-link:hover svg, .uni-nav-link.active svg { opacity: 1; }
+  .uni-sidebar-footer {
+    margin-top: auto; padding: 0.9rem 0.6rem;
+    border-top: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  }
+  .uni-logout-btn {
+    display: flex; align-items: center; gap: 9px;
+    padding: 0.55rem 1rem; border-radius: 8px;
+    color: rgba(255,255,255,0.38); text-decoration: none;
+    font-size: 12.5px; font-weight: 500;
+    transition: color 0.18s, background 0.18s; width: 100%;
+  }
+  .uni-logout-btn:hover { color: #FCA5A5; background: rgba(239,68,68,0.1); }
+  .uni-logout-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* ── Main ───────────────────────────────────────────────────────── */
+  @keyframes uniPageIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .uni-main {
+    flex: 1; min-width: 0; overflow-y: auto;
+    padding: 2rem 2.5rem; display: flex; flex-direction: column; gap: 1.75rem;
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+
+  /* ── Page header ─────────────────────────────────────────────── */
+  .up-page-header h2 {
+    font-size: 1.5rem; font-weight: 700; color: var(--up-text); letter-spacing: -0.3px;
+  }
+  .up-page-header p { font-size: 13px; color: var(--up-muted); margin-top: 3px; }
+
+  /* ── Stat grid ────────────────────────────────────────────────── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 1rem;
+  }
+  .stat-card {
+    background: var(--up-white);
+    border: 1px solid var(--up-border);
+    border-radius: var(--up-radius);
+    padding: 1.4rem 1.5rem;
+    box-shadow: var(--up-shadow);
+    display: flex; flex-direction: column; gap: 10px;
+    transition: box-shadow 0.18s, transform 0.18s;
+  }
+  .stat-card:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.1); transform: translateY(-1px); }
+  .stat-card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--up-blue-light);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stat-card-icon svg { width: 20px; height: 20px; stroke: var(--up-blue); }
+  .stat-card-value {
+    font-size: 2rem; font-weight: 700; color: var(--up-text);
+    line-height: 1; letter-spacing: -0.5px;
+  }
+  .stat-card-label {
+    font-size: 11.5px; font-weight: 600; color: var(--up-muted);
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+
+  /* ── Chart nav section ────────────────────────────────────────── */
+  .chart-section-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.9px; color: var(--up-muted);
+  }
+  .chart-link-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.9rem;
+  }
+  .chart-link-card {
+    background: var(--up-white);
+    border: 1px solid var(--up-border);
+    border-radius: var(--up-radius);
+    padding: 1.1rem 1.25rem;
+    text-decoration: none;
+    display: flex; align-items: center; gap: 13px;
+    box-shadow: var(--up-shadow);
+    transition: border-color 0.18s, box-shadow 0.18s, transform 0.18s;
+  }
+  .chart-link-card:hover {
+    border-color: var(--up-blue-400);
+    box-shadow: 0 4px 16px rgba(37,99,235,0.12);
+    transform: translateY(-2px);
+  }
+  .chart-link-card-icon {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--up-blue-light);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background 0.18s;
+  }
+  .chart-link-card:hover .chart-link-card-icon { background: var(--up-blue-lighter); }
+  .chart-link-card-icon svg { width: 19px; height: 19px; stroke: var(--up-blue); }
+  .chart-link-card-body { flex: 1; }
+  .chart-link-card-title { font-size: 13px; font-weight: 600; color: var(--up-text); }
+  .chart-link-card-sub   { font-size: 11.5px; color: var(--up-muted); margin-top: 2px; }
+  .chart-link-card-arrow { color: var(--up-blue-400); font-size: 17px; line-height: 1; }
+</style>
+
+<div class="uni-shell">
+
+  <%# ── Sidebar ── %>
+  <aside class="uni-sidebar">
+
+    <div class="uni-sidebar-brand">
+      <div class="uni-sidebar-brand-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+      </div>
+      <div class="uni-sidebar-brand-title">University Portal</div>
+      <div class="uni-sidebar-brand-sub">Alumni Analytics</div>
+    </div>
+
+    <span class="uni-sidebar-label">Overview</span>
+    <a href="/university/dashboard" class="uni-nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+      </svg>
+      Dashboard
+    </a>
+
+    <span class="uni-sidebar-label">Analytics</span>
+    <a href="/university/charts/skills-gap" class="uni-nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Skills Gap
+    </a>
+    <a href="/university/charts/employment-by-sector" class="uni-nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+      </svg>
+      Employment by Sector
+    </a>
+    <a href="/university/charts/job-titles" class="uni-nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="7" width="20" height="14" rx="2"/>
+        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+      </svg>
+      Top Job Titles
+    </a>
+    <a href="/university/charts/top-employers" class="uni-nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      Top Employers
+    </a>
+    <a href="/university/charts/certification-trends" class="uni-nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+        <polyline points="17 6 23 6 23 12"/>
+      </svg>
+      Certification Trends
+    </a>
+    <a href="/university/alumni" class="uni-nav-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      </svg>
+      Alumni Directory
+    </a>
+
+    <div class="uni-sidebar-footer">
+      <a href="/university/logout" class="uni-logout-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sign out
+      </a>
+    </div>
+
+  </aside>
+
+  <%# ── Main ── %>
+  <main class="uni-main">
+
+    <div class="up-page-header">
+      <h2>Welcome back</h2>
+      <p>Here's a live snapshot of your alumni community.</p>
+    </div>
+
+    <%# ── Stat cards ── %>
+    <div class="stat-grid">
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="stat-card-value"><%= totalAlumni.toLocaleString() %></div>
+        <div class="stat-card-label">Total Alumni</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
+          </svg>
+        </div>
+        <div class="stat-card-value"><%= totalCertifications.toLocaleString() %></div>
+        <div class="stat-card-label">Certifications (12 mo)</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          </svg>
+        </div>
+        <div class="stat-card-value"><%= totalEmployers.toLocaleString() %></div>
+        <div class="stat-card-label">Top Employers</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <div class="stat-card-value"><%= monthlyActive.toLocaleString() %></div>
+        <div class="stat-card-label">Certifications This Month</div>
+      </div>
+
+    </div>
+
+    <%# ── Chart navigation ── %>
+    <p class="chart-section-title">Explore Analytics</p>
+    <div class="chart-link-grid">
+
+      <a href="/university/charts/skills-gap" class="chart-link-card">
+        <div class="chart-link-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <div class="chart-link-card-body">
+          <div class="chart-link-card-title">Skills Gap</div>
+          <div class="chart-link-card-sub">Top certifications &amp; courses</div>
+        </div>
+        <span class="chart-link-card-arrow">›</span>
+      </a>
+
+      <a href="/university/charts/employment-by-sector" class="chart-link-card">
+        <div class="chart-link-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+        </div>
+        <div class="chart-link-card-body">
+          <div class="chart-link-card-title">Employment by Sector</div>
+          <div class="chart-link-card-sub">Industry distribution</div>
+        </div>
+        <span class="chart-link-card-arrow">›</span>
+      </a>
+
+      <a href="/university/charts/job-titles" class="chart-link-card">
+        <div class="chart-link-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          </svg>
+        </div>
+        <div class="chart-link-card-body">
+          <div class="chart-link-card-title">Top Job Titles</div>
+          <div class="chart-link-card-sub">Most common roles</div>
+        </div>
+        <span class="chart-link-card-arrow">›</span>
+      </a>
+
+      <a href="/university/charts/top-employers" class="chart-link-card">
+        <div class="chart-link-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6" y1="20" x2="6" y2="14"/>
+          </svg>
+        </div>
+        <div class="chart-link-card-body">
+          <div class="chart-link-card-title">Top Employers</div>
+          <div class="chart-link-card-sub">Where alumni work</div>
+        </div>
+        <span class="chart-link-card-arrow">›</span>
+      </a>
+
+      <a href="/university/charts/certification-trends" class="chart-link-card">
+        <div class="chart-link-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <div class="chart-link-card-body">
+          <div class="chart-link-card-title">Certification Trends</div>
+          <div class="chart-link-card-sub">12-month activity</div>
+        </div>
+        <span class="chart-link-card-arrow">›</span>
+      </a>
+
+      <a href="/university/alumni" class="chart-link-card">
+        <div class="chart-link-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="chart-link-card-body">
+          <div class="chart-link-card-title">Alumni Directory</div>
+          <div class="chart-link-card-sub">Search &amp; filter alumni</div>
+        </div>
+        <span class="chart-link-card-arrow">›</span>
+      </a>
+
+    </div>
+  </main>
+
+</div>
+
+<script>
+(function () {
+  var main = document.querySelector('.uni-main');
+  document.querySelectorAll('.uni-nav-link').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      var href = link.getAttribute('href');
+      if (!href || link.classList.contains('active') || href.startsWith('#')) return;
+      e.preventDefault();
+      if (main) {
+        main.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+        main.style.opacity    = '0';
+        main.style.transform  = 'translateY(-8px)';
+      }
+      setTimeout(function () { window.location.href = href; }, main ? 210 : 0);
+    });
+  });
+})();
+</script>
