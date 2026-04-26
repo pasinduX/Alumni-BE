@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { fetch } from "undici";
 import multer from "multer";
-import { requireLogin } from "../middleware/auth";
+import { requireLogin, requireRole } from "../middleware/auth";
 
 const router = Router();
 const upload = multer({ dest: "uploads/", limits: { fileSize: 2 * 1024 * 1024 } });
+const requireAlumni = requireRole("alumni");
 
 const apiUrl = (req: any) => `${req.protocol}://${req.get("host")}`;
 
@@ -41,7 +42,12 @@ router.get("/login", (req: any, res) => {
   if (req.query.email || req.query.password || req.query._csrf) {
     return res.redirect("/web/login");
   }
-  if (req.session?.userId) return res.redirect("/web/profile");
+  if (req.session?.userId) {
+    if (req.session.role === "university_staff") {
+      return res.redirect("/university/dashboard");
+    }
+    return res.redirect("/web/profile");
+  }
 
   const messages = { ...(res.locals.messages || {}) };
   if (req.query.verified === "1") {
@@ -58,8 +64,19 @@ router.get("/login", (req: any, res) => {
 });
 
 router.get("/register", (req: any, res) => {
-  if (req.session?.userId) return res.redirect("/web/profile");
-  res.render("auth/register", { messages: res.locals.messages || {}, title: "Join" });
+  if (req.session?.userId) {
+    if (req.session.role === "university_staff") {
+      return res.redirect("/university/dashboard");
+    }
+    return res.redirect("/web/profile");
+  }
+  res.render("auth/register", {
+    messages: res.locals.messages || {},
+    title: "Join",
+    registerTitle: "Join the network",
+    registerSubtitle: "Create your alumni account",
+    role: "alumni",
+  });
 });
 
 router.get("/forgot-password", (req: any, res) => {
@@ -87,11 +104,11 @@ router.get("/logout", requireLogin, async (req: any, res) => {
 });
 
 
-router.get("/profile/test", requireLogin, (_req, res) => {
+router.get("/profile/test", requireAlumni, (_req, res) => {
   res.send("OK /web/profile/test");
 });
 
-router.get("/profile", requireLogin, async (req: any, res, next) => {
+router.get("/profile", requireAlumni, async (req: any, res, next) => {
   try {
     const response = await fetch(`${apiUrl(req)}/profile`, {
       headers: { ...toCookieHeader(req) },
@@ -139,7 +156,7 @@ router.get("/profile", requireLogin, async (req: any, res, next) => {
   }
 });
 
-router.post("/profile", requireLogin, async (req: any, res, next) => {
+router.post("/profile", requireAlumni, async (req: any, res, next) => {
   try {
     const response = await fetch(`${apiUrl(req)}/profile`, {
       method: "PUT",
@@ -158,7 +175,7 @@ router.post("/profile", requireLogin, async (req: any, res, next) => {
 });
 
 
-router.post("/profile/image", requireLogin, upload.single("image"), async (req: any, res) => {
+router.post("/profile/image", requireAlumni, upload.single("image"), async (req: any, res) => {
   try {
     if (!req.file) {
       req.flash("error", "Please select an image file");
@@ -186,7 +203,7 @@ router.post("/profile/image", requireLogin, upload.single("image"), async (req: 
 
 // ─── Monthly bid ──────────────────────────────────────────────────────────────
 
-router.get("/profile/bid", requireLogin, async (req: any, res, next) => {
+router.get("/profile/bid", requireAlumni, async (req: any, res, next) => {
   try {
     const { query } = await import("../config/db");
     const userId: string = req.session.userId;
@@ -231,7 +248,7 @@ router.get("/profile/bid", requireLogin, async (req: any, res, next) => {
   }
 });
 
-router.post("/profile/bid", requireLogin, async (req: any, res, next) => {
+router.post("/profile/bid", requireAlumni, async (req: any, res, next) => {
   try {
     const { query } = await import("../config/db");
     const userId: string = req.session.userId;
@@ -314,7 +331,7 @@ sections.forEach((section) => {
     section === "employment_history"   ? "employment" :
     section;
 
-  router.get(`/profile/${route}`, requireLogin, async (req: any, res, next) => {
+  router.get(`/profile/${route}`, requireAlumni, async (req: any, res, next) => {
     try {
       const response = await fetch(`${apiUrl(req)}/profile`, { headers: toCookieHeader(req) });
       const redirect = handleUnauthorized(req, res, response);
@@ -331,7 +348,7 @@ sections.forEach((section) => {
     }
   });
 
-  router.post(`/profile/${route}`, requireLogin, async (req: any, res, next) => {
+  router.post(`/profile/${route}`, requireAlumni, async (req: any, res, next) => {
     try {
       const response = await fetch(`${apiUrl(req)}/profile/${section}`, {
         method: "POST",
@@ -351,7 +368,7 @@ sections.forEach((section) => {
     }
   });
 
-  router.post(`/profile/${route}/:id/delete`, requireLogin, async (req: any, res, next) => {
+  router.post(`/profile/${route}/:id/delete`, requireAlumni, async (req: any, res, next) => {
     try {
       const apiHeaders = {
         ...toCookieHeader(req),

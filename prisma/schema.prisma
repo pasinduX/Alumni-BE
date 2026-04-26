@@ -17,6 +17,7 @@ model User {
   email          String                  @unique
   passwordHash   String
   emailVerified  Boolean                 @default(false)
+  role           String                  @default("alumni")
   createdAt      DateTime                @default(now())
 
   profile        Profile?

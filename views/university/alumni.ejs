@@ -222,18 +222,10 @@
           </thead>
           <tbody>
             <% alumni.forEach(function (a) {
-              var programme   = (a.degrees && a.degrees.length)
-                                  ? a.degrees[0].title
-                                  : (filters.programme || '—');
-              var gradYear    = (a.degrees && a.degrees.length && a.degrees[0].completed_at)
-                                  ? new Date(a.degrees[0].completed_at).getFullYear()
-                                  : '—';
-              var currentJob  = (a.employment_history && a.employment_history.length)
-                                  ? a.employment_history.find(function(e){ return e.is_current; })
-                                    || a.employment_history[0]
-                                  : null;
-              var currentRole     = currentJob ? (currentJob.role     || '—') : '—';
-              var currentEmployer = currentJob ? (currentJob.company  || '—') : '—';
+              var programme       = a.programme       || '—';
+              var gradYear        = a.graduation_year || '—';
+              var currentRole     = a.current_role    || '—';
+              var currentEmployer = a.current_employer|| '—';
             %>
             <tr>
               <td class="alumni-name"><%= a.full_name || '—' %></td>

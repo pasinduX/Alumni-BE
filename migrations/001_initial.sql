@@ -9,7 +9,7 @@ CREATE TABLE users (
   is_verified BOOLEAN DEFAULT FALSE,
   reset_token TEXT,
   reset_token_expires TIMESTAMPTZ,
-  role VARCHAR(20) DEFAULT 'alumni' CHECK (role IN ('alumni','admin')),
+  role VARCHAR(20) DEFAULT 'alumni' CHECK (role IN ('alumni','admin','university_staff')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -68,6 +68,7 @@ CREATE TABLE employment_history (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   company VARCHAR(255) NOT NULL,
   role VARCHAR(255) NOT NULL,
+  industry_sector VARCHAR(255),
   start_date DATE NOT NULL,
   end_date DATE,
   is_current BOOLEAN DEFAULT FALSE

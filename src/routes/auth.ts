@@ -86,6 +86,10 @@ router.post(
   body("confirmPassword")
     .custom((value, { req }) => value === req.body.password)
     .withMessage("confirmPassword must match password"),
+  body("role")
+    .optional()
+    .isIn(["alumni", "university_staff"])
+    .withMessage("Invalid registration role"),
   handleValidationErrors,
   register,
 );

@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import bcrypt from "bcrypt";
 import { fetch } from "undici";
+import { authenticateUser } from "../services/authService";
 import { query } from "../config/db";
 import { config } from "../config";
 
@@ -14,7 +15,7 @@ export function requireUniversitySession(
   next: NextFunction
 ): void {
   const session = req.session as any;
-  if (!session?.universityApiKey) {
+  if (!session?.universityApiKey || session?.role !== "university_staff") {
     res.redirect("/university/login");
     return;
   }
@@ -25,12 +26,46 @@ export function requireUniversitySession(
 
 router.get("/login", (req: Request, res: Response) => {
   const session = req.session as any;
-  if (session?.universityApiKey) {
-    return res.redirect("/university/dashboard");
+  if (session?.userId) {
+    if (session.role === "university_staff") {
+      return res.redirect("/university/dashboard");
+    }
+    return res.redirect("/web/profile");
   }
+
+  const messages: any = {};
+  if (req.query.verified === "1") {
+    messages.success = ["Email verified successfully. You can now log in."];
+  } else if (req.query.verified === "0") {
+    if (req.query.error === "token_expired") {
+      messages.error = ["Verification link expired. Please request a new verification email."];
+    } else {
+      messages.error = ["Invalid verification link. Please check your email and try again."];
+    }
+  }
+
   res.render("university/login", {
     title: "University Portal Login",
+    messages,
     error: req.flash("error"),
+  });
+});
+
+router.get("/register", (req: Request, res: Response) => {
+  const session = req.session as any;
+  if (session?.userId) {
+    if (session.role === "university_staff") {
+      return res.redirect("/university/dashboard");
+    }
+    return res.redirect("/web/profile");
+  }
+
+  res.render("auth/register", {
+    title: "University Staff Registration",
+    registerTitle: "Join as University Staff",
+    registerSubtitle: "Create your staff account",
+    role: "university_staff",
+    messages: req.flash(),
   });
 });
 
@@ -52,25 +87,12 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
       return res.redirect("/university/login");
     }
 
-    // Look up user
-    const userResult = await query(
-      "SELECT id, password_hash FROM users WHERE email = $1 AND is_verified = TRUE LIMIT 1",
-      [email.toLowerCase()]
-    );
-
-    if (userResult.rows.length === 0) {
+    const user = await authenticateUser(email.toLowerCase(), password);
+    if (!user || user.role !== "university_staff") {
       req.flash("error", "Invalid credentials.");
       return res.redirect("/university/login");
     }
 
-    const user = userResult.rows[0];
-    const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) {
-      req.flash("error", "Invalid credentials.");
-      return res.redirect("/university/login");
-    }
-
-    // Fetch the analytics-dashboard API key (raw key_hash stored — pass as Bearer token)
     const keyResult = await query(
       `SELECT key_hash FROM api_keys
        WHERE client_name = 'analytics-dashboard' AND is_active = TRUE
@@ -84,6 +106,9 @@ router.post("/login", async (req: Request, res: Response, next: NextFunction) =>
     }
 
     const session = req.session as any;
+    session.userId = user.id;
+    session.role = user.role;
+    session.email = email.toLowerCase();
     session.universityApiKey = keyResult.rows[0].key_hash;
     session.universityUserId  = user.id;
 
@@ -273,6 +298,43 @@ router.get(
       res.render("university/charts/employers", {
         title:     "Top Employers",
         chartData: JSON.stringify(chartData),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/alumni/:id ───────────────────────────────────────────────
+
+router.get(
+  "/alumni/:id",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.session as any;
+      const apiKey  = session.universityApiKey as string;
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+      const apiRes = await fetch(`${baseUrl}/api/alumni/${req.params.id}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      if (apiRes.status === 404) {
+        return res.status(404).render("university/alumni", {
+          title:      "Alumni Not Found",
+          alumni:     [],
+          pagination: {},
+          filters:    { programme: "", graduation_year: "", industry_sector: "" },
+        });
+      }
+
+      const alumni = apiRes.ok ? await apiRes.json() : null;
+      if (!alumni) return res.redirect("/university/alumni");
+
+      res.render("university/alumni-detail", {
+        title: alumni.full_name || "Alumni Profile",
+        alumni,
       });
     } catch (err) {
       next(err);

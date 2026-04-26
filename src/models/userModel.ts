@@ -18,18 +18,19 @@ export async function createUser(
   passwordHash: string,
   verificationToken: string,
   tokenExpiresAt: Date,
+  role: string = "alumni",
 ) {
   await query(
     `INSERT INTO users
        (email, password_hash, email_verification_token, token_expires_at, is_verified, role)
-     VALUES ($1, $2, $3, $4, false, 'alumni')`,
-    [email, passwordHash, verificationToken, tokenExpiresAt],
+     VALUES ($1, $2, $3, $4, false, $5)`,
+    [email, passwordHash, verificationToken, tokenExpiresAt, role],
   );
 }
 
 export async function findByVerificationToken(token: string) {
   const r = await query(
-    "SELECT id, token_expires_at FROM users WHERE email_verification_token = $1",
+    "SELECT id, token_expires_at, role FROM users WHERE email_verification_token = $1",
     [token],
   );
   return r.rows[0] ?? null;

@@ -63,7 +63,7 @@ router.get(
            COALESCE(NULLIF(TRIM(industry_sector), ''), 'Unknown') AS sector,
            COUNT(*) AS count
          FROM employment_history
-         GROUP BY sector
+         GROUP BY COALESCE(NULLIF(TRIM(industry_sector), ''), 'Unknown')
          ORDER BY count DESC`,
         []
       );
@@ -164,11 +164,11 @@ router.get(
     try {
       const result = await query(
         `SELECT
-           TO_CHAR(completed_at, 'YYYY-MM') AS month,
+           TO_CHAR(COALESCE(completed_at, CURRENT_DATE), 'YYYY-MM') AS month,
            COUNT(*) AS count
          FROM certifications
-         WHERE completed_at >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
-           AND completed_at <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
+         WHERE COALESCE(completed_at, CURRENT_DATE) >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+           AND COALESCE(completed_at, CURRENT_DATE) <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
          GROUP BY month
          ORDER BY month ASC`,
         []

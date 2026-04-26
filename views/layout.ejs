@@ -743,7 +743,9 @@
       <svg id="closeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
     <% } %>
-    <a class="topnav-brand" href="<%= (typeof user !== 'undefined' && user) ? '/web/profile' : '/web/login' %>">
+    <a class="topnav-brand" href="<%= (typeof user !== 'undefined' && user)
+      ? (currentPath.startsWith('/university') ? '/university/dashboard' : '/web/profile')
+      : '/web/login' %>">
       <div class="topnav-brand-mark">AR</div>
       <div>
         <div class="topnav-brand-text">Alumni Network</div>
@@ -769,7 +771,7 @@
 </nav>
 
 <div class="shell">
-  <% if (typeof user !== 'undefined' && user) { %>
+  <% if (typeof user !== 'undefined' && user && !currentPath.startsWith('/university')) { %>
   <aside class="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-label">My Profile</div>

@@ -1,0 +1,206 @@
+<%# views/university/alumni-detail.ejs %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem; overflow-y: auto;
+    background: var(--up-surface);
+    display: flex; flex-direction: column; gap: 1.25rem;
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } .uni-main { padding: 1.25rem; } }
+
+  .detail-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); box-shadow: var(--up-shadow);
+    overflow: hidden;
+  }
+  .detail-card-head {
+    padding: 0.85rem 1.25rem; border-bottom: 1px solid var(--up-border);
+    background: var(--up-surface);
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.7px; color: var(--up-muted);
+  }
+  .detail-card-body { padding: 1.25rem; }
+
+  .detail-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 1rem; padding: 0.55rem 0;
+    border-bottom: 1px solid var(--up-border); font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .detail-label { color: var(--up-muted); font-weight: 500; flex-shrink: 0; }
+  .detail-value { color: var(--up-text); font-weight: 600; text-align: right; }
+
+  .timeline-item {
+    display: flex; gap: 0.85rem;
+    padding: 0.7rem 0; border-bottom: 1px solid var(--up-border);
+    font-size: 13px;
+  }
+  .timeline-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .timeline-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--up-blue); flex-shrink: 0; margin-top: 5px;
+  }
+  .timeline-dot.muted { background: var(--up-border); }
+  .timeline-title { font-weight: 600; color: var(--up-text); }
+  .timeline-sub { font-size: 12px; color: var(--up-muted); margin-top: 2px; }
+
+  .tag {
+    display: inline-flex; padding: 2px 9px;
+    background: var(--up-blue-light); color: var(--up-blue);
+    border-radius: 100px; font-size: 11.5px; font-weight: 600;
+    border: 1px solid var(--up-blue-lighter);
+  }
+  .tag.green { background: #ECFDF5; color: #065F46; border-color: #6EE7B7; }
+
+  .empty-section { color: var(--up-muted); font-size: 13px; font-style: italic; padding: 0.5rem 0; }
+</style>
+
+<div class="uni-shell">
+
+  <%- include('partials/sidebar', { activePage: 'alumni' }) %>
+
+  <main class="uni-main">
+
+    <!-- Breadcrumb -->
+    <nav style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--up-muted);">
+      <a href="/university/dashboard" style="color:var(--up-blue);text-decoration:none;font-weight:500;">Dashboard</a>
+      <span style="color:var(--up-border);">›</span>
+      <a href="/university/alumni" style="color:var(--up-blue);text-decoration:none;font-weight:500;">Alumni Directory</a>
+      <span style="color:var(--up-border);">›</span>
+      <span style="color:var(--up-text-mid);font-weight:500;"><%= alumni.full_name || alumni.email %></span>
+    </nav>
+
+    <!-- Profile header -->
+    <div class="detail-card">
+      <div class="detail-card-body" style="display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+        <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--up-blue) 0%,#1D4ED8 100%);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;flex-shrink:0;">
+          <%= (alumni.full_name || alumni.email || '?')[0].toUpperCase() %>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:1.3rem;font-weight:700;color:var(--up-text);letter-spacing:-0.3px;"><%= alumni.full_name || '—' %></div>
+          <div style="font-size:13px;color:var(--up-muted);margin-top:3px;"><%= alumni.email %></div>
+          <% if (alumni.bio) { %>
+            <div style="font-size:13px;color:var(--up-text-mid);margin-top:6px;line-height:1.5;"><%= alumni.bio %></div>
+          <% } %>
+        </div>
+        <% if (alumni.linkedin_url) { %>
+          <a href="<%= alumni.linkedin_url %>" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--up-border);background:var(--up-white);color:var(--up-blue);font-size:12.5px;font-weight:600;text-decoration:none;transition:all 0.15s;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+            LinkedIn
+          </a>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+
+      <!-- Degrees -->
+      <div class="detail-card">
+        <div class="detail-card-head">Degrees</div>
+        <div class="detail-card-body">
+          <% if (!alumni.degrees || !alumni.degrees.length) { %>
+            <div class="empty-section">No degrees recorded.</div>
+          <% } else { %>
+            <% alumni.degrees.forEach(function(d) { %>
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div>
+                  <div class="timeline-title"><%= d.title %></div>
+                  <div class="timeline-sub">
+                    <%= d.institution || 'Unknown institution' %>
+                    <% if (d.completed_at) { %> · <%= new Date(d.completed_at).getFullYear() %><% } %>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Employment -->
+      <div class="detail-card">
+        <div class="detail-card-head">Employment History</div>
+        <div class="detail-card-body">
+          <% if (!alumni.employment_history || !alumni.employment_history.length) { %>
+            <div class="empty-section">No employment records.</div>
+          <% } else { %>
+            <% alumni.employment_history.forEach(function(e) { %>
+              <div class="timeline-item">
+                <div class="timeline-dot <%= e.is_current ? '' : 'muted' %>"></div>
+                <div style="flex:1;">
+                  <div class="timeline-title"><%= e.role || '—' %> <% if (e.is_current) { %><span class="tag green" style="font-size:10.5px;padding:1px 7px;">Current</span><% } %></div>
+                  <div class="timeline-sub"><%= e.company %></div>
+                  <div class="timeline-sub">
+                    <%= e.start_date ? new Date(e.start_date).toLocaleDateString('en-GB', {month:'short',year:'numeric'}) : '' %>
+                    <%= e.end_date ? ' – ' + new Date(e.end_date).toLocaleDateString('en-GB', {month:'short',year:'numeric'}) : (e.is_current ? ' – Present' : '') %>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Certifications -->
+      <div class="detail-card">
+        <div class="detail-card-head">Certifications</div>
+        <div class="detail-card-body">
+          <% if (!alumni.certifications || !alumni.certifications.length) { %>
+            <div class="empty-section">No certifications recorded.</div>
+          <% } else { %>
+            <% alumni.certifications.forEach(function(c) { %>
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div>
+                  <div class="timeline-title"><%= c.title %></div>
+                  <div class="timeline-sub">
+                    <%= c.provider || '' %>
+                    <% if (c.completed_at) { %> · <%= new Date(c.completed_at).toLocaleDateString('en-GB', {month:'short',year:'numeric'}) %><% } %>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Licences -->
+      <div class="detail-card">
+        <div class="detail-card-head">Licences</div>
+        <div class="detail-card-body">
+          <% if (!alumni.licences || !alumni.licences.length) { %>
+            <div class="empty-section">No licences recorded.</div>
+          <% } else { %>
+            <% alumni.licences.forEach(function(l) { %>
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div>
+                  <div class="timeline-title"><%= l.title %></div>
+                  <div class="timeline-sub"><%= l.awarding_body || '' %></div>
+                </div>
+              </div>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Professional Courses -->
+      <div class="detail-card" style="grid-column: 1 / -1;">
+        <div class="detail-card-head">Professional Courses</div>
+        <div class="detail-card-body" style="display:flex;flex-wrap:wrap;gap:8px;">
+          <% if (!alumni.professional_courses || !alumni.professional_courses.length) { %>
+            <div class="empty-section">No professional courses recorded.</div>
+          <% } else { %>
+            <% alumni.professional_courses.forEach(function(c) { %>
+              <span class="tag"><%= c.title %><% if (c.provider) { %> · <%= c.provider %><% } %></span>
+            <% }); %>
+          <% } %>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>

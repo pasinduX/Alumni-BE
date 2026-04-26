@@ -15,6 +15,14 @@
     </div>
 
     <div class="auth-card">
+      <% if (messages && messages.success) { %>
+        <div class="alert alert-success" style="display:flex;">
+          <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+          <span><%= messages.success[0] %></span>
+        </div>
+      <% } %>
       <% if (error && error.length) { %>
         <div class="alert alert-danger" style="display:flex;">
           <svg class="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -56,6 +64,9 @@
 
         <button type="submit" class="btn btn-primary btn-block">Sign In</button>
       </form>
+      <p class="auth-footer" style="margin-top:1rem; text-align:center;">
+        Don't have a university staff account? <a href="/university/register">Register here</a>
+      </p>
     </div>
 
   </div>

@@ -1,110 +1,113 @@
 <%# views/university/bidding.ejs %>
 
-<%- include('partials/sidebar', { activePage: 'bidding' }) %>
+<div class="uni-shell">
 
-<div class="uni-main" style="padding:2rem 2.5rem;background:var(--up-surface);display:flex;flex-direction:column;gap:1.25rem;">
+  <%- include('partials/sidebar', { activePage: 'bidding' }) %>
 
-  <!-- Breadcrumb -->
-  <nav class="up-breadcrumb">
-    <a href="/university/dashboard">Dashboard</a>
-    <span class="up-breadcrumb-sep">/</span>
-    <span class="up-breadcrumb-current">Bidding Activity</span>
-  </nav>
+  <main class="uni-main" style="padding:2rem 2.5rem;background:var(--up-surface);display:flex;flex-direction:column;gap:1.25rem;overflow-y:auto;">
 
-  <!-- Page header -->
-  <div class="page-header" style="border-bottom:1px solid var(--up-border);padding-bottom:1rem;margin-bottom:0;">
-    <div>
-      <h2 style="font-size:1.45rem;font-weight:700;color:var(--up-text);letter-spacing:-0.3px;">Bidding Activity</h2>
-      <p style="font-size:13px;color:var(--up-muted);margin-top:3px;"><%= bidMonth %></p>
-    </div>
-    <form method="post" action="/university/bidding/select-winner" style="margin:0;" onsubmit="return confirm('Select the highest bidder as winner for <%= bidMonth %>?');">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-      <button type="submit" style="height:36px;padding:0 1.1rem;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--font-body);background:var(--up-blue);color:#fff;display:inline-flex;align-items:center;gap:6px;transition:background 0.15s;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="8" r="6"/><path d="m9 12 2 2 4-4"/><path d="M9.7 17 9 22l3-2 3 2-.7-5"/></svg>
-        Run Winner Selection Now
-      </button>
-    </form>
-  </div>
+    <!-- Breadcrumb -->
+    <nav class="up-breadcrumb" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--up-muted);">
+      <a href="/university/dashboard" style="color:var(--up-blue);text-decoration:none;font-weight:500;">Dashboard</a>
+      <span style="color:var(--up-border);">›</span>
+      <span style="color:var(--up-text-mid);font-weight:500;">Bidding Activity</span>
+    </nav>
 
-  <!-- Flash messages -->
-  <% if (messages && messages.success && messages.success.length) { %>
-    <div style="padding:12px 16px;background:#ECFDF5;border:1px solid #6EE7B7;border-left:3px solid #059669;border-radius:8px;font-size:13.5px;color:#065F46;display:flex;align-items:center;gap:8px;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-      <%= messages.success[0] %>
-    </div>
-  <% } %>
-  <% if (messages && messages.error && messages.error.length) { %>
-    <div style="padding:12px 16px;background:#FEF2F2;border:1px solid #FCA5A5;border-left:3px solid #EF4444;border-radius:8px;font-size:13.5px;color:#991B1B;display:flex;align-items:center;gap:8px;">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-      <%= messages.error[0] %>
-    </div>
-  <% } %>
-
-  <!-- Summary stats -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;">
-    <div class="up-card" style="padding:1rem 1.25rem;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);margin-bottom:6px;">Participants</div>
-      <div style="font-size:26px;font-weight:700;color:var(--up-text);font-family:var(--font-display);"><%= biddingData.length %></div>
-    </div>
-    <div class="up-card" style="padding:1rem 1.25rem;">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);margin-bottom:6px;">Winner Selected</div>
-      <% var hasWinner = biddingData.some(function(r){ return r.is_winner; }); %>
-      <div style="font-size:26px;font-weight:700;font-family:var(--font-display);color:<%= hasWinner ? '#059669' : 'var(--up-muted)' %>;">
-        <%= hasWinner ? 'Yes' : 'No' %>
+    <!-- Page header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding-bottom:1rem;border-bottom:1px solid var(--up-border);">
+      <div>
+        <h2 style="font-size:1.45rem;font-weight:700;color:var(--up-text);letter-spacing:-0.3px;">Bidding Activity</h2>
+        <p style="font-size:13px;color:var(--up-muted);margin-top:3px;"><%= bidMonth %></p>
       </div>
+      <form method="post" action="/university/bidding/select-winner" style="margin:0;" onsubmit="return confirm('Select the highest bidder as winner for <%= bidMonth %>?');">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+        <button type="submit" style="height:36px;padding:0 1.1rem;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;font-family:var(--font-body);background:var(--up-blue);color:#fff;display:inline-flex;align-items:center;gap:6px;transition:background 0.15s;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="8" r="6"/><path d="m9 12 2 2 4-4"/><path d="M9.7 17 9 22l3-2 3 2-.7-5"/></svg>
+          Run Winner Selection Now
+        </button>
+      </form>
     </div>
-  </div>
 
-  <!-- Bidding table -->
-  <div class="up-card" style="overflow:hidden;">
-    <% if (!biddingData || biddingData.length === 0) { %>
-      <div style="padding:3rem;text-align:center;color:var(--up-muted);font-size:13.5px;">
-        No bids have been placed for <%= bidMonth %> yet.
+    <!-- Flash messages -->
+    <% if (messages && messages.success && messages.success.length) { %>
+      <div style="padding:12px 16px;background:#ECFDF5;border:1px solid #6EE7B7;border-left:3px solid #059669;border-radius:8px;font-size:13.5px;color:#065F46;display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <%= messages.success[0] %>
       </div>
-    <% } else { %>
-      <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
-        <thead>
-          <tr style="background:var(--up-surface-mid);border-bottom:1px solid var(--up-border);">
-            <th style="padding:0.7rem 1.1rem;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Alumni Name</th>
-            <th style="padding:0.7rem 1.1rem;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Bids Placed</th>
-            <th style="padding:0.7rem 1.1rem;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Current Bid</th>
-            <th style="padding:0.7rem 1.1rem;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% biddingData.forEach(function(row, i) { %>
-          <tr style="border-bottom:1px solid var(--up-border);<%= i % 2 === 1 ? 'background:var(--up-surface);' : '' %>">
-            <td style="padding:0.75rem 1.1rem;font-weight:600;color:var(--up-text);">
-              <%= row.alumni_name || '—' %>
-            </td>
-            <td style="padding:0.75rem 1.1rem;color:var(--up-text-mid);">
-              <%= row.bids_count %>
-            </td>
-            <td style="padding:0.75rem 1.1rem;">
-              <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--up-blue-light);color:var(--up-blue);border-radius:100px;font-size:12px;font-weight:600;">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                Bid Placed
-              </span>
-            </td>
-            <td style="padding:0.75rem 1.1rem;">
-              <% if (row.is_winner) { %>
-                <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:100px;font-size:12px;font-weight:700;">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="#059669"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                  Winner
-                </span>
-              <% } else { %>
-                <span style="display:inline-flex;padding:3px 10px;background:var(--up-blue-lighter);color:var(--up-blue);border-radius:100px;font-size:12px;font-weight:600;">Active</span>
-              <% } %>
-            </td>
-          </tr>
-          <% }); %>
-        </tbody>
-      </table>
     <% } %>
-  </div>
+    <% if (messages && messages.error && messages.error.length) { %>
+      <div style="padding:12px 16px;background:#FEF2F2;border:1px solid #FCA5A5;border-left:3px solid #EF4444;border-radius:8px;font-size:13.5px;color:#991B1B;display:flex;align-items:center;gap:8px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <%= messages.error[0] %>
+      </div>
+    <% } %>
 
-  <p style="font-size:12px;color:var(--up-muted);margin-top:0.25rem;">
-    Bid amounts are not displayed to protect alumni privacy. Only the system winner-selection process can access the amounts.
-  </p>
+    <!-- Summary stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;">
+      <div class="up-card" style="padding:1rem 1.25rem;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);margin-bottom:6px;">Participants</div>
+        <div style="font-size:26px;font-weight:700;color:var(--up-text);"><%= biddingData.length %></div>
+      </div>
+      <div class="up-card" style="padding:1rem 1.25rem;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);margin-bottom:6px;">Winner Selected</div>
+        <% var hasWinner = biddingData.some(function(r){ return r.is_winner; }); %>
+        <div style="font-size:26px;font-weight:700;color:<%= hasWinner ? '#059669' : 'var(--up-muted)' %>;">
+          <%= hasWinner ? 'Yes' : 'No' %>
+        </div>
+      </div>
+    </div>
 
+    <!-- Bidding table -->
+    <div class="up-card" style="overflow:hidden;">
+      <% if (!biddingData || biddingData.length === 0) { %>
+        <div style="padding:3rem;text-align:center;color:var(--up-muted);font-size:13.5px;">
+          No bids have been placed for <%= bidMonth %> yet.
+        </div>
+      <% } else { %>
+        <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+          <thead>
+            <tr style="background:var(--up-surface);border-bottom:1px solid var(--up-border);">
+              <th style="padding:0.7rem 1.1rem;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Alumni Name</th>
+              <th style="padding:0.7rem 1.1rem;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Bids Placed</th>
+              <th style="padding:0.7rem 1.1rem;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Bid Status</th>
+              <th style="padding:0.7rem 1.1rem;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--up-muted);">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% biddingData.forEach(function(row, i) { %>
+            <tr style="border-bottom:1px solid var(--up-border);<%= i % 2 === 1 ? 'background:var(--up-surface);' : '' %>">
+              <td style="padding:0.75rem 1.1rem;font-weight:600;color:var(--up-text);">
+                <%= row.alumni_name || '—' %>
+              </td>
+              <td style="padding:0.75rem 1.1rem;color:var(--up-text-mid);">
+                <%= row.bids_count %>
+              </td>
+              <td style="padding:0.75rem 1.1rem;">
+                <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--up-blue-light);color:var(--up-blue);border-radius:100px;font-size:12px;font-weight:600;">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Bid Placed
+                </span>
+              </td>
+              <td style="padding:0.75rem 1.1rem;">
+                <% if (row.is_winner) { %>
+                  <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#ECFDF5;color:#065F46;border:1px solid #6EE7B7;border-radius:100px;font-size:12px;font-weight:700;">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="#059669"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                    Winner
+                  </span>
+                <% } else { %>
+                  <span style="display:inline-flex;padding:3px 10px;background:var(--up-blue-lighter);color:var(--up-blue);border-radius:100px;font-size:12px;font-weight:600;">Active</span>
+                <% } %>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      <% } %>
+    </div>
+
+    <p style="font-size:12px;color:var(--up-muted);margin-top:0.25rem;">
+      Bid amounts are not displayed to protect alumni privacy. Only the system winner-selection process can access the amounts.
+    </p>
+
+  </main>
 </div>

@@ -33,6 +33,7 @@
       <tr>
         <th>Company</th>
         <th>Role</th>
+        <th>Sector</th>
         <th>Start</th>
         <th>End</th>
         <th>Status</th>
@@ -44,6 +45,7 @@
         <tr>
           <td><%= d.company %></td>
           <td style="color:var(--ink-mid);font-weight:400"><%= d.role %></td>
+          <td style="color:var(--ink-mid);font-weight:400"><%= d.industry_sector || '—' %></td>
           <td><%= d.start_date || '—' %></td>
           <td><%= d.end_date || '—' %></td>
           <td>
@@ -83,6 +85,10 @@
         <label class="form-label">Role / Title <span class="required">*</span></label>
         <input class="form-control<%= (fieldErrors && fieldErrors.role) ? ' error' : '' %>" name="role" placeholder="Software Engineer" required />
         <% if (fieldErrors && fieldErrors.role) { %><div class="field-error visible"><%= fieldErrors.role %></div><% } %>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Industry sector</label>
+        <input class="form-control" name="industry_sector" placeholder="Technology, Healthcare, Finance" />
       </div>
       <div class="form-group">
         <label class="form-label">Start date <span class="required">*</span></label>

@@ -108,7 +108,12 @@
       });
 
       if (res.ok) {
-        window.location.href = '/web/profile';
+        const data = await res.json();
+        if (data.role === 'university_staff') {
+          window.location.href = '/university/dashboard';
+        } else {
+          window.location.href = '/web/profile';
+        }
         return;
       }
 

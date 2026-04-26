@@ -13,7 +13,11 @@ const swaggerOptions = {
             version: "1.0.0",
             description: "API documentation for AR Alumni Influencer Platform",
         },
-        servers: [{ url: "http://localhost:4000" }],
+        servers: [
+            { url: "http://localhost:8000", description: "Kong Gateway" },
+            { url: "http://localhost:3000", description: "Docker (direct)" },
+            { url: "http://localhost:4000", description: "Local dev" },
+        ],
         components: {
             securitySchemes: {
                 BearerAuth: {
@@ -25,6 +29,12 @@ const swaggerOptions = {
                     type: "apiKey",
                     in: "cookie",
                     name: "connect.sid",
+                },
+                csrfToken: {
+                    type: "apiKey",
+                    in: "header",
+                    name: "x-csrf-token",
+                    description: "CSRF token — fetch from GET /auth/csrf-token first",
                 },
             },
         },

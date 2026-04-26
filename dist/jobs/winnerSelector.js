@@ -47,7 +47,7 @@ const selectWinner = async () => {
     }
 };
 function startWinnerScheduler() {
-    node_cron_1.default.schedule("0 18 * * *", selectWinner, { timezone: "UTC" });
-    console.info("Cron job scheduled at 18:00 UTC for winner selection");
+    node_cron_1.default.schedule("0 0 * * *", selectWinner, { timezone: "UTC" });
+    console.info("Cron job scheduled at 00:00 UTC for winner selection");
 }
 //# sourceMappingURL=winnerSelector.js.map

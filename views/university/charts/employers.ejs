@@ -434,7 +434,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script>
 (function () {
   var raw = <%- chartData %>;
@@ -486,7 +485,6 @@
   });
 
   /* ── Chart ── */
-  Chart.register(ChartDataLabels);
   var ctx = document.getElementById('employersChart').getContext('2d');
 
   chartInstance = new Chart(ctx, {
@@ -506,7 +504,6 @@
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      layout: { padding: { top: 30 } },
       animation: {
         duration: 700,
         easing:   'easeOutQuart',
@@ -533,14 +530,6 @@
             }
           }
         },
-        datalabels: {
-          anchor:    'end',
-          align:     'end',
-          offset:    2,
-          color:     '#334155',
-          font:      { size: 11.5, weight: '700', family: "'Inter', sans-serif" },
-          formatter: function (value) { return value; },
-        }
       },
       scales: {
         x: {

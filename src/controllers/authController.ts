@@ -10,9 +10,9 @@ import { AppError } from "../utils/AppError";
 
 export async function register(req: Request, res: Response, next: NextFunction) {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
-    await registerUser(email, password, baseUrl);
+    await registerUser(email, password, baseUrl, String(role || "alumni"));
     return res.status(201).json({ message: "Verification email sent" });
   } catch (err) {
     next(err);
@@ -25,10 +25,10 @@ export async function verifyEmail(req: Request, res: Response, next: NextFunctio
     if (!token) {
       return res.status(400).json({ error: "Token required" });
     }
-    await verifyEmailToken(token);
-    return res.redirect("/web/login?verified=1");
+    const role = await verifyEmailToken(token);
+    const loginPath = role === "university_staff" ? "/university/login" : "/web/login";
+    return res.redirect(`${loginPath}?verified=1`);
   } catch (err: any) {
-    // Redirect to the appropriate error page instead of returning JSON
     if (err instanceof AppError && err.code === "INVALID_TOKEN") {
       return res.redirect("/web/login?verified=0&error=invalid_token");
     }
@@ -50,7 +50,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     session.userId = user.id;
     session.role = user.role;
     session.email = email;
-    return res.status(200).json({ message: "Logged in" });
+    return res.status(200).json({ message: "Logged in", role: user.role });
   } catch (err) {
     next(err);
   }

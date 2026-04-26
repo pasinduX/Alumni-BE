@@ -7,12 +7,17 @@ import * as userModel from "../models/userModel";
 
 const SALT_ROUNDS = 12;
 
-export async function registerUser(email: string, password: string, baseUrl: string) {
-  if (!email.endsWith(`@${config.allowedDomain}`)) {
+export async function registerUser(email: string, password: string, baseUrl: string, role: string = "alumni") {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail.endsWith(`@${config.allowedDomain}`)) {
     throw new AppError(400, `Email must end with @${config.allowedDomain}`, "INVALID_DOMAIN");
   }
 
-  const existing = await userModel.findByEmail(email);
+  if (!["alumni", "university_staff"].includes(role)) {
+    throw new AppError(400, "Invalid role", "INVALID_ROLE");
+  }
+
+  const existing = await userModel.findByEmail(normalizedEmail);
   if (existing) {
     throw new AppError(409, "Email already in use", "EMAIL_EXISTS");
   }
@@ -21,7 +26,7 @@ export async function registerUser(email: string, password: string, baseUrl: str
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-  await userModel.createUser(email, passwordHash, token, expires);
+  await userModel.createUser(normalizedEmail, passwordHash, token, expires, role);
 
   const verifyUrl = `${baseUrl}/auth/verify-email?token=${token}`;
   await sendEmail(
@@ -39,10 +44,12 @@ export async function verifyEmailToken(token: string) {
     throw new AppError(400, "Verification token has expired", "TOKEN_EXPIRED");
   }
   await userModel.markEmailVerified(user.id);
+  return user.role;
 }
 
 export async function authenticateUser(email: string, password: string) {
-  const user = await userModel.findByEmailWithAuth(email);
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await userModel.findByEmailWithAuth(normalizedEmail);
   if (!user || !user.is_verified) return null;
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) return null;
