@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(ps -p 61647 -o command=)",
+      "Bash(psql -h 127.0.0.1 -U propsights -d ALUMNIDB -c ' *)"
+    ]
+  }
+}

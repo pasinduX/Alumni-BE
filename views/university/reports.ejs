@@ -1,0 +1,648 @@
+<%# views/university/reports.ejs %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem; overflow-y: auto;
+    background: var(--up-surface);
+    display: flex; flex-direction: column; gap: 1.5rem;
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @media (max-width: 900px) { .uni-main { padding: 1.25rem; gap: 1.25rem; } }
+
+  /* ── section cards ── */
+  .rpt-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); box-shadow: var(--up-shadow);
+    overflow: hidden;
+  }
+  .rpt-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.9rem 1.25rem; border-bottom: 1px solid var(--up-border);
+    background: var(--up-surface); gap: 0.75rem; flex-wrap: wrap;
+  }
+  .rpt-card-title {
+    font-size: 13px; font-weight: 700; color: var(--up-text);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .rpt-card-title svg { width: 14px; height: 14px; color: var(--up-blue); }
+  .rpt-card-body { padding: 1.25rem; }
+
+  /* ── stat strip ── */
+  .rpt-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 1rem;
+  }
+  .rpt-stat {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1rem 1.25rem; box-shadow: var(--up-shadow);
+  }
+  .rpt-stat-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--up-muted); margin-bottom: 6px; }
+  .rpt-stat-value { font-size: 1.6rem; font-weight: 700; color: var(--up-text); line-height: 1; }
+  .rpt-stat-sub   { font-size: 11.5px; color: var(--up-muted); margin-top: 4px; }
+
+  /* ── presets ── */
+  .preset-list { display: flex; flex-wrap: wrap; gap: 7px; min-height: 34px; }
+  .preset-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 100px;
+    background: var(--up-blue-light); color: var(--up-blue);
+    border: 1px solid var(--up-blue-lighter);
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-pill:hover { background: var(--up-blue-lighter); }
+  .preset-pill-del {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(37,99,235,0.15); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; line-height: 1; margin-left: 2px; flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .preset-pill-del:hover { background: #EF4444; color: #fff; }
+  .preset-empty { font-size: 12.5px; color: var(--up-muted); font-style: italic; padding: 4px 0; }
+
+  /* ── filter row ── */
+  .filter-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.75rem; align-items: flex-end; }
+  @media (max-width: 780px) { .filter-grid { grid-template-columns: 1fr 1fr; } }
+  .fld-group { display: flex; flex-direction: column; gap: 4px; }
+  .fld-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--up-muted); }
+  .fld-input {
+    height: 36px; padding: 0 0.75rem;
+    border: 1px solid var(--up-border); border-radius: 8px;
+    font-size: 13px; color: var(--up-text); background: var(--up-white);
+    outline: none; font-family: var(--font-body);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .fld-input:focus { border-color: var(--up-blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+
+  /* ── column picker ── */
+  .col-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .col-check {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 8px;
+    border: 1px solid var(--up-border); background: var(--up-white);
+    font-size: 12.5px; color: var(--up-text-mid); cursor: pointer;
+    transition: all 0.15s; user-select: none; font-weight: 500;
+  }
+  .col-check input { accent-color: var(--up-blue); width: 13px; height: 13px; cursor: pointer; }
+  .col-check:has(input:checked) { background: var(--up-blue-light); border-color: var(--up-blue-lighter); color: var(--up-blue); font-weight: 600; }
+
+  /* ── buttons ── */
+  .btn-rpt {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 600;
+    border: none; cursor: pointer; font-family: var(--font-body);
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-rpt svg { width: 13px; height: 13px; }
+  .btn-primary-rpt { background: var(--up-blue); color: #fff; }
+  .btn-primary-rpt:hover { background: #1D4ED8; }
+  .btn-primary-rpt:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost-rpt { background: var(--up-surface); color: var(--up-text-mid); border: 1px solid var(--up-border) !important; }
+  .btn-ghost-rpt:hover { background: var(--up-border); }
+  .btn-success-rpt { background: #059669; color: #fff; }
+  .btn-success-rpt:hover { background: #047857; }
+  .btn-warn-rpt { background: #D97706; color: #fff; }
+  .btn-warn-rpt:hover { background: #B45309; }
+
+  /* ── preview table ── */
+  .preview-wrap { overflow-x: auto; }
+  .preview-table { width: 100%; border-collapse: collapse; font-size: 12.5px; white-space: nowrap; }
+  .preview-table th {
+    padding: 8px 12px; text-align: left; background: var(--up-surface);
+    border-bottom: 1px solid var(--up-border);
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.7px;
+    text-transform: uppercase; color: var(--up-muted);
+  }
+  .preview-table td {
+    padding: 9px 12px; border-bottom: 1px solid var(--up-border);
+    color: var(--up-text-mid); max-width: 200px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .preview-table tr:last-child td { border-bottom: none; }
+  .preview-table tr:hover td { background: var(--up-blue-light); transition: background 0.1s; }
+  .preview-table td:first-child { font-weight: 600; color: var(--up-text); }
+
+  /* ── chart download grid ── */
+  .chart-dl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1rem; }
+  .chart-dl-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1.1rem 1.25rem;
+    display: flex; flex-direction: column; gap: 10px; box-shadow: var(--up-shadow);
+    transition: box-shadow 0.18s, transform 0.18s;
+  }
+  .chart-dl-card:hover { box-shadow: 0 4px 16px rgba(37,99,235,0.1); transform: translateY(-2px); }
+  .chart-dl-icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    background: var(--up-blue-light); display: flex; align-items: center; justify-content: center;
+    color: var(--up-blue);
+  }
+  .chart-dl-icon svg { width: 18px; height: 18px; }
+  .chart-dl-name { font-size: 13px; font-weight: 700; color: var(--up-text); }
+  .chart-dl-sub  { font-size: 11.5px; color: var(--up-muted); margin-top: -4px; }
+  .chart-dl-link {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 12px;
+    font-weight: 600; color: var(--up-blue); text-decoration: none;
+    padding: 4px 10px; border-radius: 7px; background: var(--up-blue-light);
+    border: 1px solid var(--up-blue-lighter); transition: all 0.15s; align-self: flex-start;
+  }
+  .chart-dl-link:hover { background: var(--up-blue-lighter); }
+  .chart-dl-link svg { width: 12px; height: 12px; }
+
+  /* ── loading/empty ── */
+  .rpt-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 3rem; color: var(--up-muted); font-size: 13px; text-align: center;
+  }
+  .rpt-empty svg { width: 40px; height: 40px; color: var(--up-border); }
+  .rpt-loading { display: flex; align-items: center; gap: 8px; padding: 2rem; color: var(--up-muted); font-size: 13px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spin { animation: spin 0.8s linear infinite; }
+
+  /* ── PDF print ── */
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { position: absolute; inset: 0; padding: 1.5rem; background: #fff; }
+    .print-header { margin-bottom: 1.5rem; border-bottom: 2px solid #2563EB; padding-bottom: 0.75rem; }
+    .print-header h2 { font-size: 1.25rem; font-weight: 700; color: #0F172A; }
+    .print-header p  { font-size: 12px; color: #64748B; margin-top: 4px; }
+    #printTable { width: 100%; border-collapse: collapse; font-size: 11px; }
+    #printTable th { background: #EFF6FF; padding: 7px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.6px; color: #334155; border-bottom: 2px solid #2563EB; }
+    #printTable td { padding: 7px 10px; border-bottom: 1px solid #E2E8F0; color: #334155; }
+    #printTable tr:nth-child(even) td { background: #F8FAFC; }
+  }
+</style>
+
+<div class="uni-shell">
+  <%- include('partials/sidebar', { activePage: 'reports' }) %>
+
+  <main class="uni-main">
+
+    <!-- Breadcrumb -->
+    <nav style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--up-muted);">
+      <a href="/university/dashboard" style="color:var(--up-blue);text-decoration:none;font-weight:500;">Dashboard</a>
+      <span style="color:var(--up-border);">›</span>
+      <span style="color:var(--up-text-mid);font-weight:500;">Reports & Export</span>
+    </nav>
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+      <div>
+        <h1 style="font-size:1.45rem;font-weight:700;color:var(--up-text);letter-spacing:-0.3px;">Reports & Export</h1>
+        <p style="font-size:13px;color:var(--up-muted);margin-top:4px;">Build custom alumni reports, export data, and download chart images.</p>
+      </div>
+    </div>
+
+    <!-- Summary stats -->
+    <div class="rpt-stats">
+      <div class="rpt-stat">
+        <div class="rpt-stat-label">Total Alumni</div>
+        <div class="rpt-stat-value"><%= totalAlumni %></div>
+        <div class="rpt-stat-sub">in the database</div>
+      </div>
+      <div class="rpt-stat">
+        <div class="rpt-stat-label">Top Sector</div>
+        <div class="rpt-stat-value" style="font-size:1.1rem;"><%= topSector %></div>
+        <div class="rpt-stat-sub">by employment count</div>
+      </div>
+      <div class="rpt-stat">
+        <div class="rpt-stat-label">Top Employer</div>
+        <div class="rpt-stat-value" style="font-size:1.1rem;"><%= topEmployer %></div>
+        <div class="rpt-stat-sub">by alumni count</div>
+      </div>
+      <div class="rpt-stat">
+        <div class="rpt-stat-label">Report Date</div>
+        <div class="rpt-stat-value" style="font-size:1.1rem;" id="reportDate">—</div>
+        <div class="rpt-stat-sub">generated now</div>
+      </div>
+    </div>
+
+    <!-- ── Filter Presets ── -->
+    <div class="rpt-card">
+      <div class="rpt-card-head">
+        <div class="rpt-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Saved Filter Presets
+        </div>
+        <button class="btn-rpt btn-ghost-rpt" id="btnSavePreset" onclick="savePreset()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Save Current Filters
+        </button>
+      </div>
+      <div class="rpt-card-body">
+        <div class="preset-list" id="presetList">
+          <span class="preset-empty">No saved presets — apply filters below and click "Save Current Filters".</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Report Builder ── -->
+    <div class="rpt-card">
+      <div class="rpt-card-head">
+        <div class="rpt-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          Filters
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-rpt btn-ghost-rpt" onclick="clearFilters()">Clear</button>
+          <button class="btn-rpt btn-primary-rpt" onclick="runReport()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Run Report
+          </button>
+        </div>
+      </div>
+      <div class="rpt-card-body" style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div class="filter-grid">
+          <div class="fld-group">
+            <label class="fld-label">Programme</label>
+            <input class="fld-input" id="fProgramme" type="text" placeholder="e.g. Computer Science" />
+          </div>
+          <div class="fld-group">
+            <label class="fld-label">Graduation Year</label>
+            <input class="fld-input" id="fGradYear" type="number" placeholder="e.g. 2022" min="1950" max="2100" />
+          </div>
+          <div class="fld-group">
+            <label class="fld-label">Industry Sector</label>
+            <input class="fld-input" id="fSector" type="text" placeholder="e.g. Technology" />
+          </div>
+          <div class="fld-group">
+            <label class="fld-label" style="visibility:hidden;">Run</label>
+            <button class="btn-rpt btn-primary-rpt" onclick="runReport()" style="height:36px;width:100%;">Run</button>
+          </div>
+        </div>
+
+        <!-- Column picker -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+            <div class="fld-label">Select Columns / Metrics</div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-rpt btn-ghost-rpt" style="padding:3px 10px;font-size:11.5px;" onclick="selectAllCols(true)">All</button>
+              <button class="btn-rpt btn-ghost-rpt" style="padding:3px 10px;font-size:11.5px;" onclick="selectAllCols(false)">None</button>
+            </div>
+          </div>
+          <div class="col-grid" id="colPicker">
+            <label class="col-check"><input type="checkbox" value="full_name"       checked /> Full Name</label>
+            <label class="col-check"><input type="checkbox" value="email"           checked /> Email</label>
+            <label class="col-check"><input type="checkbox" value="programme"       checked /> Programme</label>
+            <label class="col-check"><input type="checkbox" value="graduation_year" checked /> Grad. Year</label>
+            <label class="col-check"><input type="checkbox" value="current_role"    checked /> Current Role</label>
+            <label class="col-check"><input type="checkbox" value="current_employer"checked /> Current Employer</label>
+            <label class="col-check"><input type="checkbox" value="industry_sector"         /> Industry Sector</label>
+            <label class="col-check"><input type="checkbox" value="linkedin_url"            /> LinkedIn URL</label>
+            <label class="col-check"><input type="checkbox" value="phone_number"            /> Phone Number</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Data Preview ── -->
+    <div class="rpt-card">
+      <div class="rpt-card-head">
+        <div class="rpt-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          Data Preview
+          <span id="previewCount" style="font-size:11px;font-weight:600;padding:2px 8px;background:var(--up-blue-light);color:var(--up-blue);border-radius:100px;"></span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-rpt btn-success-rpt" id="btnExportCSV" onclick="exportCSV()" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn-rpt btn-warn-rpt" id="btnExportPDF" onclick="exportPDF()" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Export PDF
+          </button>
+        </div>
+      </div>
+      <div id="previewBody" class="preview-wrap">
+        <div class="rpt-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+          </svg>
+          <span>Set your filters and click <strong>Run Report</strong> to preview data.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chart Downloads ── -->
+    <div class="rpt-card">
+      <div class="rpt-card-head">
+        <div class="rpt-card-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+          Downloadable Charts
+        </div>
+        <span style="font-size:12px;color:var(--up-muted);">Open each chart page to download PNG</span>
+      </div>
+      <div class="rpt-card-body">
+        <div class="chart-dl-grid">
+
+          <div class="chart-dl-card">
+            <div class="chart-dl-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <div class="chart-dl-name">Skills Gap</div>
+              <div class="chart-dl-sub">Top certifications & courses</div>
+            </div>
+            <a href="/university/charts/skills-gap" class="chart-dl-link" target="_blank">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open & Export
+            </a>
+          </div>
+
+          <div class="chart-dl-card">
+            <div class="chart-dl-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div>
+              <div class="chart-dl-name">Employment by Sector</div>
+              <div class="chart-dl-sub">Sector distribution doughnut</div>
+            </div>
+            <a href="/university/charts/employment-by-sector" class="chart-dl-link" target="_blank">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open & Export
+            </a>
+          </div>
+
+          <div class="chart-dl-card">
+            <div class="chart-dl-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+            </div>
+            <div>
+              <div class="chart-dl-name">Top Job Titles</div>
+              <div class="chart-dl-sub">Horizontal bar chart</div>
+            </div>
+            <a href="/university/charts/job-titles" class="chart-dl-link" target="_blank">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open & Export
+            </a>
+          </div>
+
+          <div class="chart-dl-card">
+            <div class="chart-dl-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div>
+              <div class="chart-dl-name">Top Employers</div>
+              <div class="chart-dl-sub">Alumni count by company</div>
+            </div>
+            <a href="/university/charts/top-employers" class="chart-dl-link" target="_blank">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open & Export
+            </a>
+          </div>
+
+          <div class="chart-dl-card">
+            <div class="chart-dl-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div>
+              <div class="chart-dl-name">Certification Trends</div>
+              <div class="chart-dl-sub">12-month rolling line chart</div>
+            </div>
+            <a href="/university/charts/certification-trends" class="chart-dl-link" target="_blank">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+              Open & Export
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- hidden print area -->
+    <div id="printArea" style="display:none;"></div>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  /* ── column definitions ──────────────────────────────────────────────────── */
+  var COLS = {
+    full_name:        { label: 'Full Name' },
+    email:            { label: 'Email' },
+    programme:        { label: 'Programme' },
+    graduation_year:  { label: 'Grad. Year' },
+    current_role:     { label: 'Current Role' },
+    current_employer: { label: 'Current Employer' },
+    industry_sector:  { label: 'Industry Sector' },
+    linkedin_url:     { label: 'LinkedIn URL' },
+    phone_number:     { label: 'Phone Number' },
+  };
+
+  /* ── state ───────────────────────────────────────────────────────────────── */
+  var reportData = [];
+  var PRESET_KEY = 'uni_report_presets_v1';
+
+  /* ── preset helpers ──────────────────────────────────────────────────────── */
+  function getPresets() {
+    try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+  function storePresets(arr) { localStorage.setItem(PRESET_KEY, JSON.stringify(arr)); }
+
+  function renderPresets() {
+    var list = document.getElementById('presetList');
+    if (!list) return;
+    var presets = getPresets();
+    if (!presets.length) {
+      list.innerHTML = '<span class="preset-empty">No saved presets — apply filters below and click "Save Current Filters".</span>';
+      return;
+    }
+    list.innerHTML = presets.map(function (p) {
+      return '<span class="preset-pill" onclick="applyPreset(' + p.id + ')">' +
+        '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>' +
+        p.name +
+        '<span class="preset-pill-del" onclick="event.stopPropagation();deletePreset(' + p.id + ')" title="Delete">×</span>' +
+        '</span>';
+    }).join('');
+  }
+
+  /* ── column helpers ──────────────────────────────────────────────────────── */
+  function selectedCols() {
+    var checked = [];
+    document.querySelectorAll('#colPicker input:checked').forEach(function (cb) {
+      checked.push(cb.value);
+    });
+    return checked;
+  }
+
+  /* ── render table ────────────────────────────────────────────────────────── */
+  function renderTable(data, cols) {
+    var body = document.getElementById('previewBody');
+    if (!body) return;
+    if (!cols.length) {
+      body.innerHTML = '<div class="rpt-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg><span>Select at least one column above.</span></div>';
+      return;
+    }
+    if (!data.length) {
+      body.innerHTML = '<div class="rpt-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>No alumni match your filters.</span></div>';
+      return;
+    }
+    var thead = '<tr>' + cols.map(function (c) { return '<th>' + COLS[c].label + '</th>'; }).join('') + '</tr>';
+    var tbody = data.map(function (row) {
+      return '<tr>' + cols.map(function (c) {
+        var v = row[c] != null ? String(row[c]) : '—';
+        return '<td title="' + v.replace(/"/g, '&quot;') + '">' + v + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    body.innerHTML = '<div class="preview-wrap"><table class="preview-table"><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div>';
+  }
+
+  /* ── button handlers (defined first so onclick attrs always work) ─────────── */
+
+  window.savePreset = function () {
+    var prog = document.getElementById('fProgramme').value.trim();
+    var year = document.getElementById('fGradYear').value.trim();
+    var sect = document.getElementById('fSector').value.trim();
+    if (!prog && !year && !sect) { alert('Set at least one filter before saving a preset.'); return; }
+    var parts = [];
+    if (prog) parts.push(prog);
+    if (year) parts.push(year);
+    if (sect) parts.push(sect);
+    var name = prompt('Name this preset:', parts.join(' · '));
+    if (!name) return;
+    var presets = getPresets();
+    presets.push({ id: Date.now(), name: name.trim(), filters: { programme: prog, graduation_year: year, industry_sector: sect } });
+    storePresets(presets);
+    renderPresets();
+  };
+
+  window.applyPreset = function (id) {
+    var preset = getPresets().find(function (p) { return p.id === id; });
+    if (!preset) return;
+    document.getElementById('fProgramme').value = preset.filters.programme       || '';
+    document.getElementById('fGradYear').value  = preset.filters.graduation_year || '';
+    document.getElementById('fSector').value    = preset.filters.industry_sector || '';
+    window.runReport();
+  };
+
+  window.deletePreset = function (id) {
+    if (!confirm('Delete this preset?')) return;
+    storePresets(getPresets().filter(function (p) { return p.id !== id; }));
+    renderPresets();
+  };
+
+  window.selectAllCols = function (on) {
+    document.querySelectorAll('#colPicker input').forEach(function (cb) { cb.checked = on; });
+  };
+
+  window.clearFilters = function () {
+    document.getElementById('fProgramme').value = '';
+    document.getElementById('fGradYear').value  = '';
+    document.getElementById('fSector').value    = '';
+  };
+
+  window.runReport = async function () {
+    var body     = document.getElementById('previewBody');
+    var cntBadge = document.getElementById('previewCount');
+    if (!body) return;
+    body.innerHTML = '<div class="rpt-loading"><svg class="spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Fetching data…</div>';
+
+    var qs = new URLSearchParams({ limit: '200' });
+    var prog = document.getElementById('fProgramme').value.trim();
+    var year = document.getElementById('fGradYear').value.trim();
+    var sect = document.getElementById('fSector').value.trim();
+    if (prog) qs.set('programme',       prog);
+    if (year) qs.set('graduation_year', year);
+    if (sect) qs.set('industry_sector', sect);
+
+    try {
+      var res  = await fetch('/university/api/alumni?' + qs.toString(), { credentials: 'include' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var json = await res.json();
+      reportData = json.data || [];
+
+      if (cntBadge) cntBadge.textContent = reportData.length + ' row' + (reportData.length !== 1 ? 's' : '');
+      renderTable(reportData, selectedCols());
+      var csvBtn = document.getElementById('btnExportCSV');
+      var pdfBtn = document.getElementById('btnExportPDF');
+      if (csvBtn) csvBtn.disabled = reportData.length === 0;
+      if (pdfBtn) pdfBtn.disabled = reportData.length === 0;
+    } catch (e) {
+      body.innerHTML = '<div class="rpt-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><span>Failed to load data (' + e.message + '). Please try again.</span></div>';
+    }
+  };
+
+  window.exportCSV = function () {
+    if (!reportData.length) return;
+    var cols = selectedCols();
+    if (!cols.length) { alert('Select at least one column first.'); return; }
+    var header = cols.map(function (c) { return '"' + COLS[c].label + '"'; }).join(',');
+    var rows = reportData.map(function (row) {
+      return cols.map(function (c) {
+        var v = row[c] != null ? String(row[c]) : '';
+        return '"' + v.replace(/"/g, '""') + '"';
+      }).join(',');
+    });
+    var csv  = [header].concat(rows).join('\r\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'alumni-report-' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  window.exportPDF = function () {
+    if (!reportData.length) return;
+    var cols = selectedCols();
+    if (!cols.length) { alert('Select at least one column first.'); return; }
+    var filters = [];
+    var prog = document.getElementById('fProgramme').value.trim();
+    var year = document.getElementById('fGradYear').value.trim();
+    var sect = document.getElementById('fSector').value.trim();
+    if (prog) filters.push('Programme: ' + prog);
+    if (year) filters.push('Graduation Year: ' + year);
+    if (sect) filters.push('Sector: ' + sect);
+    var now = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    var thead = '<tr>' + cols.map(function (c) { return '<th>' + COLS[c].label + '</th>'; }).join('') + '</tr>';
+    var tbody = reportData.map(function (row) {
+      return '<tr>' + cols.map(function (c) {
+        var v = row[c] != null ? String(row[c]) : '—';
+        return '<td>' + v + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Alumni Report</title><style>' +
+      'body{font-family:Inter,system-ui,sans-serif;font-size:11px;color:#0F172A;margin:0;padding:1.5rem;}' +
+      '.header{border-bottom:3px solid #2563EB;padding-bottom:0.75rem;margin-bottom:1.25rem;}' +
+      '.header h1{font-size:1.2rem;font-weight:700;margin:0 0 4px;}' +
+      '.header p{font-size:11px;color:#64748B;margin:2px 0;}' +
+      'table{width:100%;border-collapse:collapse;font-size:10.5px;}' +
+      'th{background:#EFF6FF;padding:6px 10px;text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:0.6px;color:#334155;border-bottom:2px solid #2563EB;}' +
+      'td{padding:6px 10px;border-bottom:1px solid #E2E8F0;color:#334155;word-break:break-word;}' +
+      'tr:nth-child(even) td{background:#F8FAFC;}' +
+      '.footer{margin-top:1rem;font-size:10px;color:#94A3B8;border-top:1px solid #E2E8F0;padding-top:0.5rem;}' +
+      '@media print{@page{margin:1.5cm;size:A4 landscape;}}' +
+      '</style></head><body>' +
+      '<div class="header"><h1>Alumni Report</h1>' +
+      '<p>Generated: ' + now + (filters.length ? ' · Filters: ' + filters.join(', ') : '') + '</p>' +
+      '<p>' + reportData.length + ' record' + (reportData.length !== 1 ? 's' : '') + '</p></div>' +
+      '<table><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table>' +
+      '<div class="footer">AR Alumni Network — University Portal · Confidential</div>' +
+      '</body></html>';
+    var win = window.open('', '_blank', 'width=1100,height=750');
+    if (!win) { alert('Allow pop-ups for this site to export PDF.'); return; }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.onload = function () { win.print(); };
+  };
+
+  /* ── page initialisation (runs after all handlers are defined) ───────────── */
+  var dateEl = document.getElementById('reportDate');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  renderPresets();
+
+  document.querySelectorAll('#colPicker input').forEach(function (cb) {
+    cb.addEventListener('change', function () {
+      if (reportData.length) renderTable(reportData, selectedCols());
+    });
+  });
+
+})();
+</script>

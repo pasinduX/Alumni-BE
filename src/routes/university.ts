@@ -326,7 +326,7 @@ router.get(
         });
       }
 
-      const alumni = apiRes.ok ? await apiRes.json() : null;
+      const alumni: any = apiRes.ok ? await apiRes.json() : null;
       if (!alumni) return res.redirect("/university/alumni");
 
       res.render("university/alumni-detail", {
@@ -458,6 +458,90 @@ router.post(
 
       (req as any).flash("success", `Winner selected: ${winner.full_name}`);
       res.redirect("/university/bidding");
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/api/alumni (session-authenticated proxy for client JS) ────
+
+router.get(
+  "/api/alumni",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.session as any;
+      const apiKey  = session.universityApiKey as string;
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+      const qs      = new URLSearchParams(req.query as Record<string, string>).toString();
+
+      const apiRes = await fetch(`${baseUrl}/api/alumni?${qs}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      const data = await apiRes.json();
+      res.status(apiRes.status).json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/api/analytics/:endpoint (session-authenticated proxy) ─────
+
+router.get(
+  "/api/analytics/:endpoint",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session  = req.session as any;
+      const apiKey   = session.universityApiKey as string;
+      const baseUrl  = `${req.protocol}://${req.get("host")}`;
+      const allowed  = new Set(["skills-gap", "employment-by-sector", "job-titles", "top-employers", "certification-trends"]);
+      if (!allowed.has(req.params.endpoint as string)) {
+        res.status(404).json({ error: "Not found" });
+        return;
+      }
+      const apiRes = await fetch(`${baseUrl}/api/analytics/${req.params.endpoint}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      const data = await apiRes.json();
+      res.status(apiRes.status).json(data);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/reports ───────────────────────────────────────────────────
+
+router.get(
+  "/reports",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.session as any;
+      const apiKey  = session.universityApiKey as string;
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+      // Fetch summary stats for the report header
+      const [alumniRes, sectorRes, employersRes] = await Promise.all([
+        fetch(`${baseUrl}/api/alumni?limit=1`, { headers: { Authorization: `Bearer ${apiKey}` } }),
+        fetch(`${baseUrl}/api/analytics/employment-by-sector`, { headers: { Authorization: `Bearer ${apiKey}` } }),
+        fetch(`${baseUrl}/api/analytics/top-employers`, { headers: { Authorization: `Bearer ${apiKey}` } }),
+      ]);
+
+      const alumniData    = alumniRes.ok    ? (await alumniRes.json() as any)         : { pagination: { total: 0 } };
+      const sectorData    = sectorRes.ok    ? (await sectorRes.json() as any[])        : [];
+      const employersData = employersRes.ok ? (await employersRes.json() as any[])     : [];
+
+      res.render("university/reports", {
+        title:          "Reports & Export",
+        totalAlumni:    alumniData?.pagination?.total ?? 0,
+        topSector:      sectorData[0]?.sector ?? "—",
+        topEmployer:    employersData[0]?.company ?? "—",
+      });
     } catch (err) {
       next(err);
     }

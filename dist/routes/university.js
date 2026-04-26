@@ -51,11 +51,8 @@ router.get("/register", (req, res) => {
         }
         return res.redirect("/web/profile");
     }
-    res.render("auth/register", {
+    res.render("university/register", {
         title: "University Staff Registration",
-        registerTitle: "Join as University Staff",
-        registerSubtitle: "Create your staff account",
-        role: "university_staff",
         messages: req.flash(),
     });
 });
@@ -240,6 +237,35 @@ router.get("/charts/employers", requireUniversitySession, async (req, res, next)
         next(err);
     }
 });
+// ── GET /university/alumni/:id ───────────────────────────────────────────────
+router.get("/alumni/:id", requireUniversitySession, async (req, res, next) => {
+    try {
+        const session = req.session;
+        const apiKey = session.universityApiKey;
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        const apiRes = await (0, undici_1.fetch)(`${baseUrl}/api/alumni/${req.params.id}`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        if (apiRes.status === 404) {
+            return res.status(404).render("university/alumni", {
+                title: "Alumni Not Found",
+                alumni: [],
+                pagination: {},
+                filters: { programme: "", graduation_year: "", industry_sector: "" },
+            });
+        }
+        const alumni = apiRes.ok ? await apiRes.json() : null;
+        if (!alumni)
+            return res.redirect("/university/alumni");
+        res.render("university/alumni-detail", {
+            title: alumni.full_name || "Alumni Profile",
+            alumni,
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+});
 // ── Route aliases (sidebar uses descriptive slugs) ───────────────────────────
 router.get("/charts/employment-by-sector", requireUniversitySession, (_req, res) => res.redirect("/university/charts/employment"));
 router.get("/charts/job-titles", requireUniversitySession, (_req, res) => res.redirect("/university/charts/employment"));
@@ -326,6 +352,49 @@ router.post("/bidding/select-winner", requireUniversitySession, async (req, res,
         await (0, db_1.query)("UPDATE monthly_bids SET is_winner = TRUE  WHERE id = $1", [winner.id]);
         req.flash("success", `Winner selected: ${winner.full_name}`);
         res.redirect("/university/bidding");
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// ── GET /university/api/alumni (session-authenticated proxy for client JS) ────
+router.get("/api/alumni", requireUniversitySession, async (req, res, next) => {
+    try {
+        const session = req.session;
+        const apiKey = session.universityApiKey;
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        const qs = new URLSearchParams(req.query).toString();
+        const apiRes = await (0, undici_1.fetch)(`${baseUrl}/api/alumni?${qs}`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+        });
+        const data = await apiRes.json();
+        res.status(apiRes.status).json(data);
+    }
+    catch (err) {
+        next(err);
+    }
+});
+// ── GET /university/reports ───────────────────────────────────────────────────
+router.get("/reports", requireUniversitySession, async (req, res, next) => {
+    try {
+        const session = req.session;
+        const apiKey = session.universityApiKey;
+        const baseUrl = `${req.protocol}://${req.get("host")}`;
+        // Fetch summary stats for the report header
+        const [alumniRes, sectorRes, employersRes] = await Promise.all([
+            (0, undici_1.fetch)(`${baseUrl}/api/alumni?limit=1`, { headers: { Authorization: `Bearer ${apiKey}` } }),
+            (0, undici_1.fetch)(`${baseUrl}/api/analytics/employment-by-sector`, { headers: { Authorization: `Bearer ${apiKey}` } }),
+            (0, undici_1.fetch)(`${baseUrl}/api/analytics/top-employers`, { headers: { Authorization: `Bearer ${apiKey}` } }),
+        ]);
+        const alumniData = alumniRes.ok ? await alumniRes.json() : { pagination: { total: 0 } };
+        const sectorData = sectorRes.ok ? await sectorRes.json() : [];
+        const employersData = employersRes.ok ? await employersRes.json() : [];
+        res.render("university/reports", {
+            title: "Reports & Export",
+            totalAlumni: alumniData?.pagination?.total ?? 0,
+            topSector: sectorData[0]?.sector ?? "—",
+            topEmployer: employersData[0]?.company ?? "—",
+        });
     }
     catch (err) {
         next(err);

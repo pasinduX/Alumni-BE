@@ -48,7 +48,7 @@ router.get("/analytics/employment-by-sector", requireApiKey_1.requireApiKey, (0,
            COALESCE(NULLIF(TRIM(industry_sector), ''), 'Unknown') AS sector,
            COUNT(*) AS count
          FROM employment_history
-         GROUP BY sector
+         GROUP BY COALESCE(NULLIF(TRIM(industry_sector), ''), 'Unknown')
          ORDER BY count DESC`, []);
         const data = result.rows.map((row) => ({
             sector: row.sector,
@@ -119,11 +119,11 @@ router.get("/analytics/top-employers", requireApiKey_1.requireApiKey, (0, requir
 router.get("/analytics/certification-trends", requireApiKey_1.requireApiKey, (0, requirePermission_1.requirePermission)("read:analytics"), async (_req, res, next) => {
     try {
         const result = await (0, db_1.query)(`SELECT
-           TO_CHAR(completed_at, 'YYYY-MM') AS month,
+           TO_CHAR(COALESCE(completed_at, CURRENT_DATE), 'YYYY-MM') AS month,
            COUNT(*) AS count
          FROM certifications
-         WHERE completed_at >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
-           AND completed_at <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
+         WHERE COALESCE(completed_at, CURRENT_DATE) >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
+           AND COALESCE(completed_at, CURRENT_DATE) <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
          GROUP BY month
          ORDER BY month ASC`, []);
         const data = result.rows.map((row) => ({

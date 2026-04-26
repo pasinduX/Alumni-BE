@@ -134,10 +134,31 @@
   }
 
   /* ── Page header ─────────────────────────────────────────────── */
+  .up-page-header-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
   .up-page-header h2 {
     font-size: 1.5rem; font-weight: 700; color: var(--up-text); letter-spacing: -0.3px;
   }
   .up-page-header p { font-size: 13px; color: var(--up-muted); margin-top: 3px; }
+  .up-pdf-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 0.6rem 1.1rem;
+    background: linear-gradient(135deg, var(--up-blue) 0%, #1D4ED8 100%);
+    color: #fff; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    box-shadow: var(--up-shadow-blue);
+    transition: opacity 0.18s, transform 0.18s;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .up-pdf-btn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
+  .up-pdf-btn:active:not(:disabled) { transform: translateY(0); }
+  .up-pdf-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .up-pdf-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* ── Stat grid ────────────────────────────────────────────────── */
   .stat-grid {
@@ -295,8 +316,21 @@
   <main class="uni-main">
 
     <div class="up-page-header">
-      <h2>Welcome back</h2>
-      <p>Here's a live snapshot of your alumni community.</p>
+      <div class="up-page-header-row">
+        <div>
+          <h2>Welcome back</h2>
+          <p>Here's a live snapshot of your alumni community.</p>
+        </div>
+        <button id="pdfBtn" class="up-pdf-btn" onclick="generatePDFReport()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="12" y1="18" x2="12" y2="12"/>
+            <line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          <span id="pdfBtnLabel">Generate PDF Report</span>
+        </button>
+      </div>
     </div>
 
     <%# ── Stat cards ── %>
@@ -443,6 +477,133 @@
 </div>
 
 <script>
+function generatePDFReport() {
+  var btn   = document.getElementById('pdfBtn');
+  var label = document.getElementById('pdfBtnLabel');
+  if (btn.disabled) return;
+  btn.disabled  = true;
+  label.textContent = 'Generating…';
+
+  var stats = {
+    totalAlumni:         <%- totalAlumni %>,
+    totalCertifications: <%- totalCertifications %>,
+    totalEmployers:      <%- totalEmployers %>,
+    monthlyActive:       <%- monthlyActive %>
+  };
+
+  Promise.all([
+    fetch('/university/api/analytics/employment-by-sector', { credentials: 'include' }).then(function(r){ return r.json(); }),
+    fetch('/university/api/analytics/top-employers',        { credentials: 'include' }).then(function(r){ return r.json(); }),
+    fetch('/university/api/analytics/job-titles',           { credentials: 'include' }).then(function(r){ return r.json(); }),
+    fetch('/university/api/analytics/certification-trends', { credentials: 'include' }).then(function(r){ return r.json(); }),
+    fetch('/university/api/analytics/skills-gap',           { credentials: 'include' }).then(function(r){ return r.json(); }),
+  ]).then(function(results) {
+    var sectorData    = results[0];
+    var employersData = results[1];
+    var titlesData    = results[2];
+    var trendsData    = results[3];
+    var skillsData    = results[4];
+    var reportDate    = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    var win = window.open('', '_blank', 'width=1200,height=870');
+    if (!win) {
+      alert('Please allow pop-ups for this site to generate the PDF report.');
+      resetBtn();
+      return;
+    }
+    win.document.write(buildPDFHtml(sectorData, employersData, titlesData, trendsData, skillsData, stats, reportDate));
+    win.document.close();
+    resetBtn();
+  }).catch(function(err) {
+    alert('Failed to load report data: ' + err.message);
+    resetBtn();
+  });
+
+  function resetBtn() {
+    btn.disabled      = false;
+    label.textContent = 'Generate PDF Report';
+  }
+}
+
+function buildPDFHtml(sectorData, employersData, titlesData, trendsData, skillsData, stats, reportDate) {
+  var P = ['#2563EB','#3B82F6','#60A5FA','#93C5FD','#BFDBFE','#1D4ED8','#1E40AF','#1E3A8A','#7C3AED','#8B5CF6'];
+  var h = '';
+  h += '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">';
+  h += '<title>Alumni Analytics Report</title>';
+  h += '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.js"><\/script>';
+  h += '<style>';
+  h += '*{box-sizing:border-box;margin:0;padding:0}';
+  h += 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#0F172A;background:#fff}';
+  h += '.wrap{max-width:1100px;margin:0 auto;padding:2rem 2.5rem}';
+  h += '.hdr{padding-bottom:1.25rem;margin-bottom:1.75rem;border-bottom:3px solid #2563EB}';
+  h += '.hdr h1{font-size:1.55rem;font-weight:800;color:#0C1E3E;letter-spacing:-0.4px;margin-bottom:3px}';
+  h += '.hdr p{font-size:12.5px;color:#64748B}';
+  h += '.pills{display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem}';
+  h += '.pill{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:.55rem .9rem;text-align:center;min-width:120px}';
+  h += '.pval{font-size:1.35rem;font-weight:700;color:#2563EB;line-height:1}';
+  h += '.plbl{font-size:9.5px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.6px;margin-top:3px}';
+  h += '.grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}';
+  h += '.card{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:1.1rem 1.25rem}';
+  h += '.card.full{grid-column:1/-1}';
+  h += '.ctitle{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:#334155;margin-bottom:.8rem}';
+  h += '.no-print{display:flex;justify-content:center;gap:.75rem;padding:1.75rem 0;margin-top:.5rem}';
+  h += '.btn{padding:.55rem 1.3rem;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none}';
+  h += '.btn-p{background:#2563EB;color:#fff}';
+  h += '.btn-s{background:#E2E8F0;color:#334155}';
+  h += '@media print{.no-print{display:none!important}@page{size:A4;margin:1.2cm}}';
+  h += '</style></head><body><div class="wrap">';
+
+  h += '<div class="hdr">';
+  h += '<h1>Alumni Analytics Report</h1>';
+  h += '<p>Generated on ' + reportDate + '</p>';
+  h += '<div class="pills">';
+  h += '<div class="pill"><div class="pval">' + stats.totalAlumni.toLocaleString() + '</div><div class="plbl">Total Alumni</div></div>';
+  h += '<div class="pill"><div class="pval">' + stats.totalCertifications.toLocaleString() + '</div><div class="plbl">Certifications (12 mo)</div></div>';
+  h += '<div class="pill"><div class="pval">' + stats.totalEmployers.toLocaleString() + '</div><div class="plbl">Employers</div></div>';
+  h += '<div class="pill"><div class="pval">' + stats.monthlyActive.toLocaleString() + '</div><div class="plbl">This Month</div></div>';
+  h += '</div></div>';
+
+  h += '<div class="grid">';
+  h += '<div class="card"><div class="ctitle">Employment by Sector</div><canvas id="c1" height="240"></canvas></div>';
+  h += '<div class="card"><div class="ctitle">Top Employers</div><canvas id="c2" height="240"></canvas></div>';
+  h += '<div class="card"><div class="ctitle">Top Job Titles</div><canvas id="c3" height="240"></canvas></div>';
+  h += '<div class="card"><div class="ctitle">Certification Trends — Last 12 Months</div><div style="position:relative;height:210px"><canvas id="c4"></canvas></div></div>';
+  h += '<div class="card full"><div class="ctitle">Skills Gap Analysis — Top Certifications &amp; Courses</div><canvas id="c5" height="220"></canvas></div>';
+  h += '</div>';
+
+  h += '<div class="no-print">';
+  h += '<button class="btn btn-p" onclick="window.print()">Print / Save as PDF</button>';
+  h += '<button class="btn btn-s" onclick="window.close()">Close</button>';
+  h += '</div></div>';
+
+  h += '<script>';
+  h += 'var P=' + JSON.stringify(P) + ';';
+  h += 'var sd=' + JSON.stringify(sectorData) + ';';
+  h += 'var ed=' + JSON.stringify(employersData) + ';';
+  h += 'var td=' + JSON.stringify(titlesData) + ';';
+  h += 'var rd=' + JSON.stringify(trendsData) + ';';
+  h += 'var kd=' + JSON.stringify(skillsData) + ';';
+  h += 'function mk(id,cfg){new Chart(document.getElementById(id),cfg);}';
+  // Build a full 12-month label set so the line chart always spans the year
+  // (API only returns months that have data, so missing months need to be zeroed)
+  h += '(function(){';
+  h += 'var allMonths=[];';
+  h += 'for(var i=11;i>=0;i--){var d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);allMonths.push(d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2));}';
+  h += 'var rdMap={};rd.forEach(function(r){rdMap[r.month]=r.count;});';
+  h += 'var rdLabels=allMonths;';
+  h += 'var rdCounts=allMonths.map(function(m){return rdMap[m]||0;});';
+  h += 'window.addEventListener("load",function(){';
+  h += 'mk("c1",{type:"doughnut",data:{labels:sd.map(function(d){return d.sector;}),datasets:[{data:sd.map(function(d){return d.count;}),backgroundColor:P,hoverOffset:4}]},options:{responsive:true,plugins:{legend:{position:"bottom",labels:{font:{size:10},padding:8}}}}});';
+  h += 'mk("c2",{type:"bar",data:{labels:ed.map(function(d){return d.company;}),datasets:[{data:ed.map(function(d){return d.count;}),backgroundColor:"#2563EB",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:"#E2E8F0"},beginAtZero:true,ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});';
+  h += 'mk("c3",{type:"bar",data:{labels:td.map(function(d){return d.role;}),datasets:[{data:td.map(function(d){return d.count;}),backgroundColor:"#3B82F6",borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:"#E2E8F0"},beginAtZero:true,ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});';
+  h += 'mk("c4",{type:"line",data:{labels:rdLabels,datasets:[{label:"Certifications",data:rdCounts,borderColor:"#2563EB",borderWidth:2,backgroundColor:"rgba(37,99,235,0.12)",fill:true,tension:0.4,pointRadius:4,pointHoverRadius:6,pointBackgroundColor:"#2563EB",pointBorderColor:"#fff",pointBorderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{title:function(items){return items[0].label;}}}},scales:{x:{grid:{color:"#E2E8F0"},ticks:{font:{size:10},maxRotation:45}},y:{grid:{color:"#E2E8F0"},beginAtZero:true,ticks:{font:{size:10},stepSize:1}}}}});';
+  h += 'mk("c5",{type:"bar",data:{labels:kd.map(function(d){return d.title+(d.provider?" ("+d.provider+")":"");}),datasets:[{data:kd.map(function(d){return d.count;}),backgroundColor:kd.map(function(_,i){return P[i%P.length];}),borderRadius:4}]},options:{indexAxis:"y",responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:"#E2E8F0"},beginAtZero:true,ticks:{font:{size:10}}},y:{ticks:{font:{size:10}}}}}});';
+  h += 'setTimeout(function(){window.print();},1200);';
+  h += '});})();<\/script>';
+  h += '</body></html>';
+  return h;
+}
+
 (function () {
   var main = document.querySelector('.uni-main');
   document.querySelectorAll('.uni-nav-link').forEach(function (link) {

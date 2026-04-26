@@ -68,7 +68,35 @@ router.get("/alumni", requireApiKey_1.requireApiKey, (0, requirePermission_1.req
            ap.bio,
            ap.linkedin_url,
            ap.profile_image_url,
-           ap.updated_at
+           ap.updated_at,
+           (
+             SELECT d.title
+             FROM degrees d
+             WHERE d.user_id = u.id
+             ORDER BY d.completed_at DESC NULLS LAST
+             LIMIT 1
+           ) AS programme,
+           (
+             SELECT EXTRACT(YEAR FROM d.completed_at)::int
+             FROM degrees d
+             WHERE d.user_id = u.id
+             ORDER BY d.completed_at DESC NULLS LAST
+             LIMIT 1
+           ) AS graduation_year,
+           (
+             SELECT eh.role
+             FROM employment_history eh
+             WHERE eh.user_id = u.id
+             ORDER BY eh.is_current DESC, eh.start_date DESC
+             LIMIT 1
+           ) AS current_role,
+           (
+             SELECT eh.company
+             FROM employment_history eh
+             WHERE eh.user_id = u.id
+             ORDER BY eh.is_current DESC, eh.start_date DESC
+             LIMIT 1
+           ) AS current_employer
          FROM users u
          JOIN alumni_profiles ap ON ap.user_id = u.id
          ${whereClause}
