@@ -60,11 +60,8 @@ router.get("/register", (req: Request, res: Response) => {
     return res.redirect("/web/profile");
   }
 
-  res.render("auth/register", {
+  res.render("university/register", {
     title: "University Staff Registration",
-    registerTitle: "Join as University Staff",
-    registerSubtitle: "Create your staff account",
-    role: "university_staff",
     messages: req.flash(),
   });
 });
