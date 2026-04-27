@@ -1,0 +1,319 @@
+<%# views/university/analytics/skills-gap-by-programme.ejs — Scenario 1 %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem;
+    display: flex; flex-direction: column; gap: 1.5rem;
+    background: var(--up-surface);
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); flex-wrap:wrap; }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; }
+  .up-breadcrumb a:hover { text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); }
+
+  .scenario-banner {
+    background: linear-gradient(135deg, var(--up-navy) 0%, var(--up-navy-700) 100%);
+    border-radius: var(--up-radius);
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: flex-start; gap: 1rem;
+  }
+  .scenario-badge {
+    background: var(--up-blue); color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+    white-space: nowrap; margin-top: 2px; flex-shrink: 0;
+  }
+  .scenario-banner h2 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .scenario-banner p  { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+
+  .filter-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1.1rem 1.5rem;
+    box-shadow: var(--up-shadow);
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  }
+  .filter-label { font-size: 12px; font-weight: 600; color: var(--up-muted); white-space: nowrap; }
+  .filter-select {
+    flex: 1; min-width: 200px;
+    padding: 0.48rem 0.85rem; border: 1px solid var(--up-border);
+    border-radius: 7px; font-size: 13px; color: var(--up-text);
+    background: var(--up-white); outline: none; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .filter-select:focus { border-color: var(--up-blue); }
+  .filter-btn {
+    padding: 0.48rem 1.1rem; background: var(--up-blue); color: #fff;
+    border: none; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .filter-btn:hover { opacity: 0.88; }
+  .filter-clear {
+    font-size: 12px; color: var(--up-muted); text-decoration: none; font-weight: 500;
+    transition: color 0.15s;
+  }
+  .filter-clear:hover { color: var(--up-danger); }
+
+  .stats-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .stat-pill {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 0.9rem 1.25rem;
+    box-shadow: var(--up-shadow); flex: 1; min-width: 150px;
+  }
+  .stat-pill-val { font-size: 1.6rem; font-weight: 700; color: var(--up-text); line-height: 1; }
+  .stat-pill-val.accent { color: var(--up-blue); }
+  .stat-pill-lbl { font-size: 11px; font-weight: 600; color: var(--up-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 4px; }
+
+  .up-chart-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); box-shadow: var(--up-shadow); overflow: hidden;
+  }
+  .up-chart-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--up-border); gap: 1rem; flex-wrap: wrap;
+  }
+  .up-chart-card-title { font-size: 14px; font-weight: 700; color: var(--up-text); }
+  .up-chart-card-sub   { font-size: 12px; color: var(--up-muted); margin-top: 2px; }
+  .up-btn-icon {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 7px; border: 1px solid var(--up-border);
+    background: var(--up-white); color: var(--up-text-mid); font-size: 12px;
+    font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s;
+  }
+  .up-btn-icon:hover { border-color: var(--up-blue-400); background: var(--up-blue-light); color: var(--up-blue); }
+  .up-btn-icon svg { width: 13px; height: 13px; }
+  .up-chart-body { padding: 1.5rem; }
+  .up-chart-wrap { position: relative; height: 480px; }
+
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    background: var(--up-surface); color: var(--up-muted); font-size: 10.5px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+    padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--up-border);
+  }
+  .data-table td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--up-surface-mid); color: var(--up-text); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--up-blue-light); }
+  .pct-badge {
+    display: inline-block; padding: 2px 7px; border-radius: 4px;
+    font-size: 11px; font-weight: 700;
+    background: var(--up-blue-light); color: var(--up-blue);
+  }
+
+  .up-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; height: 220px; color: var(--up-muted); font-size: 13.5px; text-align: center;
+  }
+  .up-prompt {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 2.5rem; color: var(--up-muted); text-align: center;
+    border: 2px dashed var(--up-border); border-radius: var(--up-radius);
+  }
+  .up-prompt svg { width: 36px; height: 36px; opacity: 0.35; }
+  .up-prompt p { font-size: 13px; }
+</style>
+
+<div class="uni-shell">
+  <%- include('../partials/sidebar', { activePage: 'sgp' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Scenario Insights</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Skills Gap by Programme</span>
+    </nav>
+
+    <div class="scenario-banner">
+      <span class="scenario-badge">Scenario 1</span>
+      <div>
+        <h2>Skills Gap Detection</h2>
+        <p>Identify which certifications and courses alumni are independently acquiring after graduation, filtered by degree programme. High counts signal curriculum gaps — skills graduates need but didn't learn at university.</p>
+      </div>
+    </div>
+
+    <form class="filter-card" method="GET" action="/university/analytics/skills-gap-by-programme">
+      <span class="filter-label">Filter by Programme</span>
+      <select name="programme" class="filter-select">
+        <option value="">— All Programmes —</option>
+        <% programmes.forEach(function(p) { %>
+          <option value="<%= p %>" <%= selectedProgramme === p ? 'selected' : '' %>><%= p %></option>
+        <% }) %>
+      </select>
+      <button type="submit" class="filter-btn">Apply</button>
+      <% if (selectedProgramme) { %>
+        <a href="/university/analytics/skills-gap-by-programme" class="filter-clear">Clear filter</a>
+      <% } %>
+    </form>
+
+    <% if (skillsData.length > 0) { %>
+
+      <div class="stats-row">
+        <div class="stat-pill">
+          <div class="stat-pill-val accent"><%= skillsData.length %></div>
+          <div class="stat-pill-lbl">Unique Skills Identified</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-val"><%= skillsData[0].pct_of_graduates %>%</div>
+          <div class="stat-pill-lbl">Alumni with Top Skill</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-val" style="font-size:1.1rem;word-break:break-word">
+            <%= skillsData[0].title %>
+          </div>
+          <div class="stat-pill-lbl">Most Acquired Skill</div>
+        </div>
+        <% if (selectedProgramme) { %>
+        <div class="stat-pill">
+          <div class="stat-pill-val" style="font-size:1.1rem;word-break:break-word"><%= selectedProgramme %></div>
+          <div class="stat-pill-lbl">Filtered Programme</div>
+        </div>
+        <% } %>
+      </div>
+
+      <div class="up-chart-card">
+        <div class="up-chart-card-head">
+          <div>
+            <div class="up-chart-card-title">Post-Graduation Skill Acquisitions</div>
+            <div class="up-chart-card-sub">
+              <%= selectedProgramme ? 'Filtered to ' + selectedProgramme + ' alumni' : 'All programmes combined' %> — % of cohort who completed each skill
+            </div>
+          </div>
+          <button class="up-btn-icon" id="btnDownload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export PNG
+          </button>
+        </div>
+        <div class="up-chart-body">
+          <div class="up-chart-wrap">
+            <canvas id="sgpChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="up-chart-card">
+        <div class="up-chart-card-head">
+          <div class="up-chart-card-title">Detailed Breakdown</div>
+          <div class="up-chart-card-sub">Sorted by number of alumni completions</div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Skill / Certification</th>
+                <th>Provider</th>
+                <th>Alumni Count</th>
+                <th>% of Cohort</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% skillsData.forEach(function(row, i) { %>
+                <tr>
+                  <td style="color:var(--up-muted);font-weight:700"><%= i + 1 %></td>
+                  <td style="font-weight:500"><%= row.title %></td>
+                  <td style="color:var(--up-muted)"><%= row.provider || '—' %></td>
+                  <td><strong><%= row.count %></strong></td>
+                  <td><span class="pct-badge"><%= row.pct_of_graduates %>%</span></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    <% } else { %>
+      <div class="up-prompt">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+          <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+        </svg>
+        <p>
+          <% if (selectedProgramme) { %>
+            No certification data found for <strong><%= selectedProgramme %></strong>.<br>Alumni in this programme may not have logged certifications yet.
+          <% } else { %>
+            Select a programme above to see skills gap analysis, or view all programmes by leaving the filter empty.
+          <% } %>
+        </p>
+      </div>
+    <% } %>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var raw = <%- JSON.stringify(skillsData) %>;
+  if (!raw || !raw.length) return;
+
+  var labels = raw.map(function (d) { return d.provider ? d.title + ' (' + d.provider + ')' : d.title; });
+  var counts = raw.map(function (d) { return d.count; });
+  var pcts   = raw.map(function (d) { return d.pct_of_graduates; });
+  var bgColors = counts.map(function (v, i) {
+    var t = counts.length > 1 ? 1 - (i / (counts.length - 1)) : 1;
+    return 'rgba(37,99,235,' + (0.45 + t * 0.45).toFixed(2) + ')';
+  });
+
+  var ctx = document.getElementById('sgpChart').getContext('2d');
+  var chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Alumni completions',
+        data: counts,
+        backgroundColor: bgColors,
+        borderColor: 'rgba(29,78,216,0.7)',
+        borderWidth: 1,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 650, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0F172A', titleColor: '#60A5FA', bodyColor: '#E2E8F0',
+          padding: 12, cornerRadius: 8,
+          callbacks: {
+            title: function (items) { return items[0].label; },
+            label: function (item) { return '  Completions: ' + item.raw; },
+            afterLabel: function (item) { return '  % of cohort: ' + pcts[item.dataIndex] + '%'; }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Number of Completions', font: { size: 12 }, color: '#94A3B8', padding: { top: 8 } },
+          ticks: { precision: 0, color: '#94A3B8', font: { size: 11.5 } },
+          grid: { color: 'rgba(226,232,240,0.8)' }, border: { display: false },
+        },
+        y: {
+          ticks: {
+            color: '#334155', font: { size: 11.5 },
+            callback: function (val, idx) { var l = labels[idx]; return l.length > 42 ? l.slice(0, 40) + '…' : l; }
+          },
+          grid: { display: false }, border: { display: false },
+        }
+      }
+    }
+  });
+
+  document.getElementById('btnDownload').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = chart.toBase64Image('image/png', 1);
+    a.download = 'skills-gap-by-programme.png';
+    a.click();
+  });
+})();
+</script>

@@ -1,0 +1,282 @@
+<%# views/university/analytics/career-pathways.ejs — Scenario 2 %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem;
+    display: flex; flex-direction: column; gap: 1.5rem;
+    background: var(--up-surface);
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); flex-wrap:wrap; }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; }
+  .up-breadcrumb a:hover { text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); }
+
+  .scenario-banner {
+    background: linear-gradient(135deg, #1E3A8A 0%, var(--up-navy-700) 100%);
+    border-radius: var(--up-radius); padding: 1.25rem 1.5rem;
+    display: flex; align-items: flex-start; gap: 1rem;
+  }
+  .scenario-badge {
+    background: #7C3AED; color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+    white-space: nowrap; margin-top: 2px; flex-shrink: 0;
+  }
+  .scenario-banner h2 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .scenario-banner p  { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+
+  .filter-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1.1rem 1.5rem; box-shadow: var(--up-shadow);
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  }
+  .filter-label { font-size: 12px; font-weight: 600; color: var(--up-muted); white-space: nowrap; }
+  .filter-select {
+    flex: 1; min-width: 220px; padding: 0.48rem 0.85rem;
+    border: 1px solid var(--up-border); border-radius: 7px; font-size: 13px;
+    color: var(--up-text); background: var(--up-white); outline: none; cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .filter-select:focus { border-color: #7C3AED; }
+  .filter-btn {
+    padding: 0.48rem 1.1rem; background: #7C3AED; color: #fff;
+    border: none; border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .filter-btn:hover { opacity: 0.88; }
+  .filter-clear { font-size: 12px; color: var(--up-muted); text-decoration: none; font-weight: 500; transition: color 0.15s; }
+  .filter-clear:hover { color: var(--up-danger); }
+
+  /* Programme summary cards (shown when no filter) */
+  .programmes-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem;
+  }
+  .programme-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1.1rem 1.25rem; box-shadow: var(--up-shadow);
+    text-decoration: none; display: block; transition: box-shadow 0.18s, transform 0.18s;
+  }
+  .programme-card:hover { box-shadow: 0 4px 16px rgba(124,58,237,0.12); transform: translateY(-2px); }
+  .programme-card-name { font-size: 13.5px; font-weight: 700; color: var(--up-text); margin-bottom: 0.6rem; }
+  .programme-card-count { font-size: 11px; font-weight: 600; color: #7C3AED; margin-bottom: 0.75rem; }
+  .programme-card-row { font-size: 12px; color: var(--up-muted); display: flex; gap: 5px; align-items: flex-start; margin-bottom: 3px; }
+  .programme-card-row svg { width: 12px; height: 12px; flex-shrink: 0; margin-top: 1px; stroke: #7C3AED; }
+
+  /* Detailed view (when programme selected) */
+  .stats-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .stat-pill {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 0.9rem 1.25rem; box-shadow: var(--up-shadow);
+    flex: 1; min-width: 150px;
+  }
+  .stat-pill-val { font-size: 1.6rem; font-weight: 700; color: var(--up-text); line-height: 1; }
+  .stat-pill-val.purple { color: #7C3AED; }
+  .stat-pill-val.text { font-size: 1.1rem; word-break: break-word; }
+  .stat-pill-lbl { font-size: 11px; font-weight: 600; color: var(--up-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-top: 4px; }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+  .up-chart-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); box-shadow: var(--up-shadow); overflow: hidden;
+  }
+  .up-chart-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--up-border);
+  }
+  .up-chart-card-title { font-size: 13px; font-weight: 700; color: var(--up-text); }
+  .up-chart-card-sub   { font-size: 11.5px; color: var(--up-muted); margin-top: 2px; }
+  .up-chart-body { padding: 1.25rem; }
+  .up-chart-wrap { position: relative; height: 300px; }
+
+  .up-prompt {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 2.5rem; color: var(--up-muted); text-align: center;
+    border: 2px dashed var(--up-border); border-radius: var(--up-radius);
+  }
+  .up-prompt svg { width: 36px; height: 36px; opacity: 0.35; }
+  .up-prompt p { font-size: 13px; }
+</style>
+
+<div class="uni-shell">
+  <%- include('../partials/sidebar', { activePage: 'career-pathways' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Scenario Insights</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Career Pathways</span>
+    </nav>
+
+    <div class="scenario-banner">
+      <span class="scenario-badge">Scenario 2</span>
+      <div>
+        <h2>Emerging Career Pathways</h2>
+        <p>See where graduates from each degree programme actually end up working — which sectors they enter and which roles they hold. Cross-referencing programme of study with career outcomes reveals pathways the university isn't formally preparing students for.</p>
+      </div>
+    </div>
+
+    <form class="filter-card" method="GET" action="/university/analytics/career-pathways">
+      <span class="filter-label">Select Programme</span>
+      <select name="programme" class="filter-select">
+        <option value="">— View All Programmes —</option>
+        <% programmes.forEach(function(p) { %>
+          <option value="<%= p %>" <%= selectedProgramme === p ? 'selected' : '' %>><%= p %></option>
+        <% }) %>
+      </select>
+      <button type="submit" class="filter-btn">Analyse</button>
+      <% if (selectedProgramme) { %>
+        <a href="/university/analytics/career-pathways" class="filter-clear">← All programmes</a>
+      <% } %>
+    </form>
+
+    <% if (!selectedProgramme) { %>
+      <%# ── All-programmes summary ── %>
+      <% if (Array.isArray(pathway) && pathway.length > 0) { %>
+        <div class="programmes-grid">
+          <% pathway.forEach(function(p) { %>
+            <a href="/university/analytics/career-pathways?programme=<%= encodeURIComponent(p.programme) %>" class="programme-card">
+              <div class="programme-card-name"><%= p.programme %></div>
+              <div class="programme-card-count"><%= p.total_alumni %> alumni</div>
+              <% if (p.top_sector) { %>
+                <div class="programme-card-row">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                  <span>Top sector: <strong><%= p.top_sector %></strong></span>
+                </div>
+              <% } %>
+              <% if (p.top_role) { %>
+                <div class="programme-card-row">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                  <span>Top role: <strong><%= p.top_role %></strong></span>
+                </div>
+              <% } %>
+            </a>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="up-prompt">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
+          <p>No programme data available. Alumni need to log their employment history for this analysis to work.</p>
+        </div>
+      <% } %>
+
+    <% } else { %>
+      <%# ── Single-programme detail ── %>
+      <% var p = pathway; %>
+
+      <div class="stats-row">
+        <div class="stat-pill">
+          <div class="stat-pill-val purple"><%= p.total_alumni %></div>
+          <div class="stat-pill-lbl">Alumni in Programme</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-val text"><%= (p.sectors && p.sectors[0]) ? p.sectors[0].sector : '—' %></div>
+          <div class="stat-pill-lbl">Top Employment Sector</div>
+        </div>
+        <div class="stat-pill">
+          <div class="stat-pill-val text"><%= (p.roles && p.roles[0]) ? p.roles[0].role : '—' %></div>
+          <div class="stat-pill-lbl">Most Common Role</div>
+        </div>
+        <% if (p.sectors && p.sectors[0]) { %>
+        <div class="stat-pill">
+          <div class="stat-pill-val purple"><%= p.sectors[0].pct %>%</div>
+          <div class="stat-pill-lbl">Work in Top Sector</div>
+        </div>
+        <% } %>
+      </div>
+
+      <% if ((!p.sectors || p.sectors.length === 0) && (!p.roles || p.roles.length === 0)) { %>
+        <div class="up-prompt">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8l4 4-4 4"/></svg>
+          <p>No employment data found for <strong><%= selectedProgramme %></strong>.<br>Alumni need to log employment history for pathway analysis.</p>
+        </div>
+      <% } else { %>
+        <div class="charts-grid">
+          <div class="up-chart-card">
+            <div class="up-chart-card-head">
+              <div>
+                <div class="up-chart-card-title">Employment by Sector</div>
+                <div class="up-chart-card-sub">% of <%= selectedProgramme %> alumni in each sector</div>
+              </div>
+            </div>
+            <div class="up-chart-body">
+              <div class="up-chart-wrap"><canvas id="sectorsChart"></canvas></div>
+            </div>
+          </div>
+          <div class="up-chart-card">
+            <div class="up-chart-card-head">
+              <div>
+                <div class="up-chart-card-title">Top Job Roles</div>
+                <div class="up-chart-card-sub">Most common roles held by graduates</div>
+              </div>
+            </div>
+            <div class="up-chart-body">
+              <div class="up-chart-wrap"><canvas id="rolesChart"></canvas></div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    <% } %>
+
+  </main>
+</div>
+
+<% if (selectedProgramme && pathway && pathway.sectors) { %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var sectors = <%- JSON.stringify(pathway.sectors || []) %>;
+  var roles   = <%- JSON.stringify(pathway.roles   || []) %>;
+
+  var sharedOpts = {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    animation: { duration: 600, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0F172A', titleColor: '#C4B5FD', bodyColor: '#E2E8F0',
+        padding: 12, cornerRadius: 8,
+        callbacks: {
+          label: function (item) { return '  Alumni: ' + item.raw; },
+          afterLabel: function (item) {
+            var d = item.dataset.rawData ? item.dataset.rawData[item.dataIndex] : null;
+            return d ? '  % of cohort: ' + d.pct + '%' : '';
+          }
+        }
+      }
+    },
+    scales: {
+      x: { beginAtZero: true, ticks: { precision: 0, color: '#94A3B8', font: { size: 11 } }, grid: { color: 'rgba(226,232,240,0.8)' }, border: { display: false } },
+      y: { ticks: { color: '#334155', font: { size: 11.5 }, callback: function (v, i, a) { var l = this.getLabelForValue(v); return l.length > 28 ? l.slice(0,26)+'…' : l; } }, grid: { display: false }, border: { display: false } }
+    }
+  };
+
+  if (sectors.length) {
+    new Chart(document.getElementById('sectorsChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: sectors.map(function (d) { return d.sector; }),
+        datasets: [{ label: 'Alumni', data: sectors.map(function (d) { return d.count; }), rawData: sectors, backgroundColor: '#7C3AED', borderRadius: 4 }]
+      },
+      options: sharedOpts
+    });
+  }
+
+  if (roles.length) {
+    new Chart(document.getElementById('rolesChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: roles.map(function (d) { return d.role; }),
+        datasets: [{ label: 'Alumni', data: roles.map(function (d) { return d.count; }), rawData: roles, backgroundColor: '#2563EB', borderRadius: 4 }]
+      },
+      options: sharedOpts
+    });
+  }
+})();
+</script>
+<% } %>

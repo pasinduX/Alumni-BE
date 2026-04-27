@@ -136,43 +136,46 @@ router.get(
       const baseUrl   = `${req.protocol}://${req.get("host")}`;
       const headers   = { Authorization: `Bearer ${apiKey}` };
 
-      // Four parallel analytics fetches
-      const [alumniRes, certsRes, employersRes, trendsRes] = await Promise.all([
+      // Parallel analytics fetches
+      const [alumniRes, certsRes, employersRes, sectorRes] = await Promise.all([
         fetch(`${baseUrl}/api/alumni?limit=1`, { headers }),
         fetch(`${baseUrl}/api/analytics/certification-trends`, { headers }),
         fetch(`${baseUrl}/api/analytics/top-employers`, { headers }),
-        fetch(`${baseUrl}/api/analytics/certification-trends`, { headers }),
+        fetch(`${baseUrl}/api/analytics/employment-by-sector`, { headers }),
       ]);
 
-      // Total alumni — taken from pagination.total
+      // Total alumni
       let totalAlumni = 0;
       if (alumniRes.ok) {
         const alumniData = (await alumniRes.json()) as any;
         totalAlumni = alumniData?.pagination?.total ?? 0;
       }
 
-      // Total certifications — sum all monthly counts from certification-trends
+      // Certification trends — totals, monthly active, and inline chart data
       let totalCertifications = 0;
-      if (certsRes.ok) {
-        const certsData = (await certsRes.json()) as Array<{ month: string; count: number }>;
-        totalCertifications = certsData.reduce((sum, row) => sum + row.count, 0);
-      }
-
-      // Total unique employers — count of top-employers rows returned
-      let totalEmployers = 0;
-      if (employersRes.ok) {
-        const employersData = (await employersRes.json()) as Array<unknown>;
-        totalEmployers = employersData.length;
-      }
-
-      // Monthly active — certifications added in the current month
       let monthlyActive = 0;
-      if (trendsRes.ok) {
-        const trendsData = (await trendsRes.json()) as Array<{ month: string; count: number }>;
-        const now        = new Date();
-        const thisMonth  = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-        const row        = trendsData.find((r) => r.month === thisMonth);
-        monthlyActive    = row?.count ?? 0;
+      let trendsData: Array<{ month: string; count: number }> = [];
+      if (certsRes.ok) {
+        trendsData          = (await certsRes.json()) as Array<{ month: string; count: number }>;
+        totalCertifications = trendsData.reduce((sum, row) => sum + row.count, 0);
+        const now           = new Date();
+        const thisMonth     = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+        const row           = trendsData.find((r) => r.month === thisMonth);
+        monthlyActive       = row?.count ?? 0;
+      }
+
+      // Top employers
+      let totalEmployers = 0;
+      let topEmployers: Array<{ company: string; count: number }> = [];
+      if (employersRes.ok) {
+        topEmployers  = (await employersRes.json()) as Array<{ company: string; count: number }>;
+        totalEmployers = topEmployers.length;
+      }
+
+      // Employment sectors
+      let topSectors: Array<{ sector: string; count: number }> = [];
+      if (sectorRes.ok) {
+        topSectors = (await sectorRes.json()) as Array<{ sector: string; count: number }>;
       }
 
       res.render("university/dashboard", {
@@ -181,6 +184,9 @@ router.get(
         totalCertifications,
         totalEmployers,
         monthlyActive,
+        topEmployers:       topEmployers.slice(0, 6),
+        topSectors:         topSectors.slice(0, 6),
+        trendsData,
       });
     } catch (err) {
       next(err);
@@ -498,14 +504,19 @@ router.get(
       const session  = req.session as any;
       const apiKey   = session.universityApiKey as string;
       const baseUrl  = `${req.protocol}://${req.get("host")}`;
-      const allowed  = new Set(["skills-gap", "employment-by-sector", "job-titles", "top-employers", "certification-trends"]);
+      const allowed  = new Set([
+        "skills-gap", "employment-by-sector", "job-titles", "top-employers",
+        "certification-trends", "career-pathways", "certification-growth", "programme-list",
+      ]);
       if (!allowed.has(req.params.endpoint as string)) {
         res.status(404).json({ error: "Not found" });
         return;
       }
-      const apiRes = await fetch(`${baseUrl}/api/analytics/${req.params.endpoint}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      const qs = new URLSearchParams(req.query as Record<string, string>).toString();
+      const apiRes = await fetch(
+        `${baseUrl}/api/analytics/${req.params.endpoint}${qs ? `?${qs}` : ""}`,
+        { headers: { Authorization: `Bearer ${apiKey}` } }
+      );
       const data = await apiRes.json();
       res.status(apiRes.status).json(data);
     } catch (err) {
@@ -541,6 +552,105 @@ router.get(
         totalAlumni:    alumniData?.pagination?.total ?? 0,
         topSector:      sectorData[0]?.sector ?? "—",
         topEmployer:    employersData[0]?.company ?? "—",
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/analytics/skills-gap-by-programme (Scenario 1) ───────────
+
+router.get(
+  "/analytics/skills-gap-by-programme",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session  = req.session as any;
+      const apiKey   = session.universityApiKey as string;
+      const baseUrl  = `${req.protocol}://${req.get("host")}`;
+      const headers  = { Authorization: `Bearer ${apiKey}` };
+      const selected = (req.query.programme as string) || "";
+
+      const skillsUrl = selected
+        ? `${baseUrl}/api/analytics/skills-gap?programme=${encodeURIComponent(selected)}`
+        : `${baseUrl}/api/analytics/skills-gap`;
+
+      const [programmesRes, skillsRes] = await Promise.all([
+        fetch(`${baseUrl}/api/analytics/programme-list`, { headers }),
+        fetch(skillsUrl, { headers }),
+      ]);
+
+      const programmes: string[] = programmesRes.ok ? (await programmesRes.json() as string[]) : [];
+      const skillsData: any[]    = skillsRes.ok     ? (await skillsRes.json() as any[])        : [];
+
+      res.render("university/analytics/skills-gap-by-programme", {
+        title:             "Skills Gap by Programme",
+        programmes,
+        skillsData,
+        selectedProgramme: selected,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/analytics/career-pathways (Scenario 2) ───────────────────
+
+router.get(
+  "/analytics/career-pathways",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session  = req.session as any;
+      const apiKey   = session.universityApiKey as string;
+      const baseUrl  = `${req.protocol}://${req.get("host")}`;
+      const headers  = { Authorization: `Bearer ${apiKey}` };
+      const selected = (req.query.programme as string) || "";
+
+      const pathwayUrl = `${baseUrl}/api/analytics/career-pathways${selected ? `?programme=${encodeURIComponent(selected)}` : ""}`;
+
+      const [programmesRes, pathwayRes] = await Promise.all([
+        fetch(`${baseUrl}/api/analytics/programme-list`, { headers }),
+        fetch(pathwayUrl, { headers }),
+      ]);
+
+      const programmes: string[] = programmesRes.ok ? (await programmesRes.json() as string[]) : [];
+      const pathway: any         = pathwayRes.ok    ? await pathwayRes.json()                  : (selected ? { programme: selected, total_alumni: 0, sectors: [], roles: [] } : []);
+
+      res.render("university/analytics/career-pathways", {
+        title:             "Career Pathways",
+        programmes,
+        pathway,
+        selectedProgramme: selected,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /university/analytics/certification-growth (Scenario 3) ──────────────
+
+router.get(
+  "/analytics/certification-growth",
+  requireUniversitySession,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const session = req.session as any;
+      const apiKey  = session.universityApiKey as string;
+      const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+      const apiRes = await fetch(`${baseUrl}/api/analytics/certification-growth`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      const growthData: any[] = apiRes.ok ? (await apiRes.json() as any[]) : [];
+
+      res.render("university/analytics/certification-growth", {
+        title: "Certification Growth Trends",
+        growthData,
       });
     } catch (err) {
       next(err);

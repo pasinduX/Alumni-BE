@@ -1,0 +1,275 @@
+<%# views/university/analytics/certification-growth.ejs — Scenario 3 %>
+
+<style>
+  .uni-main {
+    flex: 1; padding: 2rem 2.5rem;
+    display: flex; flex-direction: column; gap: 1.5rem;
+    background: var(--up-surface);
+    animation: uniPageIn 0.32s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .up-breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--up-muted); flex-wrap:wrap; }
+  .up-breadcrumb a { color:var(--up-blue); text-decoration:none; font-weight:500; }
+  .up-breadcrumb a:hover { text-decoration:underline; }
+  .up-breadcrumb-sep { color:var(--up-border); }
+
+  .scenario-banner {
+    background: linear-gradient(135deg, #065F46 0%, #064E3B 100%);
+    border-radius: var(--up-radius); padding: 1.25rem 1.5rem;
+    display: flex; align-items: flex-start; gap: 1rem;
+  }
+  .scenario-badge {
+    background: #059669; color: #fff;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+    white-space: nowrap; margin-top: 2px; flex-shrink: 0;
+  }
+  .scenario-banner h2 { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 3px; }
+  .scenario-banner p  { font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.5; }
+
+  .period-note {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 0.8rem 1.25rem; box-shadow: var(--up-shadow);
+    display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  }
+  .period-note span { font-size: 12px; color: var(--up-muted); display: flex; align-items: center; gap: 6px; }
+  .period-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* KPI Category Cards */
+  .category-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem;
+  }
+  .category-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); padding: 1.25rem; box-shadow: var(--up-shadow);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .category-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .category-card-name { font-size: 13px; font-weight: 700; color: var(--up-text); }
+  .category-card-keywords { display: flex; flex-wrap: wrap; gap: 4px; }
+  .kw-tag {
+    font-size: 9.5px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+    background: var(--up-blue-light); color: var(--up-blue); letter-spacing: 0.3px;
+  }
+  .growth-badge {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 800;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .growth-badge.up   { background: #D1FAE5; color: #065F46; }
+  .growth-badge.down { background: #FEE2E2; color: #991B1B; }
+  .growth-badge.flat { background: var(--up-surface-mid); color: var(--up-muted); }
+  .category-counts { display: flex; gap: 1rem; }
+  .count-block { flex: 1; }
+  .count-block-val { font-size: 1.4rem; font-weight: 700; color: var(--up-text); line-height: 1; }
+  .count-block-lbl { font-size: 10px; font-weight: 600; color: var(--up-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+  .category-bar-wrap { background: var(--up-surface-mid); border-radius: 4px; height: 6px; overflow: hidden; }
+  .category-bar { height: 100%; border-radius: 4px; background: #059669; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
+
+  /* Chart */
+  .up-chart-card {
+    background: var(--up-white); border: 1px solid var(--up-border);
+    border-radius: var(--up-radius); box-shadow: var(--up-shadow); overflow: hidden;
+  }
+  .up-chart-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--up-border);
+  }
+  .up-chart-card-title { font-size: 14px; font-weight: 700; color: var(--up-text); }
+  .up-chart-card-sub   { font-size: 12px; color: var(--up-muted); margin-top: 2px; }
+  .up-btn-icon {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 6px 12px; border-radius: 7px; border: 1px solid var(--up-border);
+    background: var(--up-white); color: var(--up-text-mid); font-size: 12px;
+    font-weight: 600; cursor: pointer; text-decoration: none; transition: all 0.15s;
+  }
+  .up-btn-icon:hover { border-color: #059669; background: #ECFDF5; color: #065F46; }
+  .up-btn-icon svg { width: 13px; height: 13px; }
+  .up-chart-body { padding: 1.5rem; }
+  .up-chart-wrap { position: relative; height: 380px; }
+
+  .up-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; padding: 3rem; color: var(--up-muted); text-align: center;
+    border: 2px dashed var(--up-border); border-radius: var(--up-radius);
+  }
+  .up-empty svg { width: 36px; height: 36px; opacity: 0.35; }
+  .up-empty p { font-size: 13px; }
+</style>
+
+<div class="uni-shell">
+  <%- include('../partials/sidebar', { activePage: 'cert-growth' }) %>
+
+  <main class="uni-main">
+
+    <nav class="up-breadcrumb">
+      <a href="/university/dashboard">Dashboard</a>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Scenario Insights</span>
+      <span class="up-breadcrumb-sep">›</span>
+      <span>Certification Growth</span>
+    </nav>
+
+    <div class="scenario-banner">
+      <span class="scenario-badge">Scenario 3</span>
+      <div>
+        <h2>Industry Demand Tracking</h2>
+        <p>Track which skill categories are rising fastest among graduates. Compares the current 6-month certification volume against the previous 6 months to reveal emerging industry demand — so the university can proactively update curricula before graduates fall behind.</p>
+      </div>
+    </div>
+
+    <div class="period-note">
+      <span><span class="period-dot" style="background:#059669"></span>Current period: last 6 months</span>
+      <span><span class="period-dot" style="background:#94A3B8"></span>Previous period: 6–12 months ago</span>
+      <span style="margin-left:auto;font-size:11.5px">Growth % = (current − previous) ÷ previous × 100</span>
+    </div>
+
+    <% if (growthData.length === 0) { %>
+      <div class="up-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+        </svg>
+        <p>No certification data found. Alumni need to log certifications and courses for growth analysis.</p>
+      </div>
+    <% } else { %>
+      <%
+        var maxCurrent = Math.max.apply(null, growthData.map(function(d) { return d.current_count; }));
+      %>
+
+      <div class="category-grid">
+        <% growthData.forEach(function(cat) { %>
+          <%
+            var isUp   = cat.growth_pct > 0;
+            var isDown = cat.growth_pct < 0;
+            var growthClass = isUp ? 'up' : (isDown ? 'down' : 'flat');
+            var growthSymbol = isUp ? '↑' : (isDown ? '↓' : '→');
+            var barWidth = maxCurrent > 0 ? Math.round((cat.current_count / maxCurrent) * 100) : 0;
+          %>
+          <div class="category-card">
+            <div class="category-card-header">
+              <span class="category-card-name"><%= cat.category %></span>
+              <span class="growth-badge <%= growthClass %>">
+                <%= growthSymbol %> <%= Math.abs(cat.growth_pct) %>%
+              </span>
+            </div>
+            <div class="category-card-keywords">
+              <% cat.keywords.forEach(function(kw) { %>
+                <span class="kw-tag"><%= kw %></span>
+              <% }) %>
+            </div>
+            <div class="category-counts">
+              <div class="count-block">
+                <div class="count-block-val"><%= cat.current_count %></div>
+                <div class="count-block-lbl">Current</div>
+              </div>
+              <div class="count-block">
+                <div class="count-block-val" style="color:var(--up-muted)"><%= cat.previous_count %></div>
+                <div class="count-block-lbl">Previous</div>
+              </div>
+            </div>
+            <div class="category-bar-wrap">
+              <div class="category-bar" style="width:<%= barWidth %>%;background:<%= isUp ? '#059669' : (isDown ? '#EF4444' : '#94A3B8') %>"></div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <div class="up-chart-card">
+        <div class="up-chart-card-head">
+          <div>
+            <div class="up-chart-card-title">Current vs Previous Period — All Categories</div>
+            <div class="up-chart-card-sub">Grouped bar chart: current 6 months vs previous 6 months</div>
+          </div>
+          <button class="up-btn-icon" id="btnDownload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Export PNG
+          </button>
+        </div>
+        <div class="up-chart-body">
+          <div class="up-chart-wrap">
+            <canvas id="growthChart"></canvas>
+          </div>
+        </div>
+      </div>
+    <% } %>
+
+  </main>
+</div>
+
+<% if (growthData.length > 0) { %>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var raw = <%- JSON.stringify(growthData) %>;
+
+  var labels  = raw.map(function (d) { return d.category; });
+  var current  = raw.map(function (d) { return d.current_count; });
+  var previous = raw.map(function (d) { return d.previous_count; });
+  var growths  = raw.map(function (d) { return d.growth_pct; });
+
+  var ctx = document.getElementById('growthChart').getContext('2d');
+  var chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Current (last 6 mo)',
+          data: current,
+          backgroundColor: '#059669',
+          borderRadius: 5,
+          borderSkipped: false,
+        },
+        {
+          label: 'Previous (6–12 mo ago)',
+          data: previous,
+          backgroundColor: 'rgba(148,163,184,0.5)',
+          borderRadius: 5,
+          borderSkipped: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 650, easing: 'easeOutQuart' },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 12 }, padding: 16, usePointStyle: true } },
+        tooltip: {
+          backgroundColor: '#0F172A', titleColor: '#6EE7B7', bodyColor: '#E2E8F0',
+          padding: 12, cornerRadius: 8,
+          callbacks: {
+            afterBody: function (items) {
+              var idx = items[0].dataIndex;
+              var g = growths[idx];
+              var symbol = g > 0 ? '↑' : (g < 0 ? '↓' : '→');
+              return ['', '  Growth: ' + symbol + ' ' + Math.abs(g) + '%'];
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#334155', font: { size: 11.5 } },
+          grid: { display: false }, border: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0, color: '#94A3B8', font: { size: 11 } },
+          grid: { color: 'rgba(226,232,240,0.8)' }, border: { display: false }
+        }
+      }
+    }
+  });
+
+  document.getElementById('btnDownload').addEventListener('click', function () {
+    var a = document.createElement('a');
+    a.href = chart.toBase64Image('image/png', 1);
+    a.download = 'certification-growth.png';
+    a.click();
+  });
+})();
+</script>
+<% } %>
