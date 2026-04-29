@@ -42,7 +42,7 @@ async function main(): Promise<void> {
         [seed.clientName, hash, JSON.stringify(seed.permissions)]
       );
 
-      console.log(`label       : ${seed.label}`);
+      console.log(`client      : ${seed.clientName}`);
       console.log(`raw API key : ${raw}`);
       console.log("---------------------------------------------------");
     }

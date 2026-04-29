@@ -56,11 +56,11 @@ export async function authenticateUser(email: string, password: string) {
   return { id: user.id, role: user.role };
 }
 
-export async function requestPasswordReset(email: string, baseUrl: string) {
+export async function requestPasswordReset(email: string, baseUrl: string, resetPath = "/auth/reset-password") {
   const token = crypto.randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + 60 * 60 * 1000);
   await userModel.setResetToken(email, token, expires);
-  const resetUrl = `${baseUrl}/auth/reset-password?token=${token}`;
+  const resetUrl = `${baseUrl}${resetPath}?token=${token}`;
   await sendEmail(
     email,
     "Reset your password",

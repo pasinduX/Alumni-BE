@@ -333,6 +333,11 @@
       <span class="up-breadcrumb-current">Top Employers</span>
     </nav>
 
+    <%- include('../partials/filter-bar', {
+      filterAction: '/university/charts/top-employers',
+      programmes, graduationYears, selectedProgramme, selectedYear
+    }) %>
+
     <!-- Page header -->
     <div class="up-page-header">
       <div class="up-page-header-text">

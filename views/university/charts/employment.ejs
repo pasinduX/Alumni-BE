@@ -46,7 +46,7 @@
 
 <div class="uni-shell">
 
-  <%- include('../partials/sidebar', { activePage: 'employment-by-sector' }) %>
+  <%- include('../partials/sidebar', { activePage: activePage || 'employment-by-sector' }) %>
 
   <main class="uni-main">
 
@@ -55,12 +55,17 @@
       <span class="up-breadcrumb-sep">›</span>
       <span>Analytics</span>
       <span class="up-breadcrumb-sep">›</span>
-      <span class="up-breadcrumb-current">Employment</span>
+      <span class="up-breadcrumb-current"><%= activePage === 'job-titles' ? 'Top Job Titles' : 'Employment by Sector' %></span>
     </nav>
+
+    <%- include('../partials/filter-bar', {
+      filterAction: activePage === 'job-titles' ? '/university/charts/job-titles' : '/university/charts/employment-by-sector',
+      programmes, graduationYears, selectedProgramme, selectedYear
+    }) %>
 
     <div class="up-page-header-text">
       <h1>Employment Analytics</h1>
-      <p>Sector distribution and top job titles across all alumni employment records.</p>
+      <p>Sector distribution and top job titles across alumni employment records<% if (selectedProgramme) { %> — <strong><%= selectedProgramme %></strong><% } %><% if (selectedYear) { %> graduating <strong><%= selectedYear %></strong><% } %>.</p>
     </div>
 
     <div class="charts-grid">

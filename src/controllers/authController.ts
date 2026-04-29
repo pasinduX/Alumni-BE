@@ -84,7 +84,6 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
     await resetUserPassword(token, newPassword);
     return res.status(200).json({ message: "Password reset successful" });
   } catch (err) {
-    // Let the global AppError handler return the correct 400 status + message
     next(err);
   }
 }

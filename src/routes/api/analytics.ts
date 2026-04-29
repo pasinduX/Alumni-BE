@@ -5,12 +5,43 @@ import { requirePermission } from "../../middleware/requirePermission";
 
 const router = Router();
 
+// ── Shared helper ─────────────────────────────────────────────────────────────
+
 /**
- * GET /api/analytics/skills-gap
- *
- * Aggregates certifications and professional_courses by title + provider,
- * returns the top 20 most common entries sorted by count descending.
+ * Builds a `WHERE user_id IN (SELECT ...)` cohort subquery from optional
+ * programme and graduation_year filters.  Returns the subquery string and its
+ * bound params.  If neither filter is given, returns null for the subquery so
+ * callers can omit the WHERE clause entirely.
  */
+function buildCohortFilter(
+  programme?: string,
+  graduationYear?: string
+): { subquery: string | null; params: (string | number)[] } {
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (programme) {
+    params.push(`%${programme}%`);
+    conditions.push(`title ILIKE $${params.length}`);
+  }
+  if (graduationYear) {
+    const yr = parseInt(graduationYear, 10);
+    if (!isNaN(yr)) {
+      params.push(yr);
+      conditions.push(`EXTRACT(YEAR FROM completed_at) = $${params.length}`);
+    }
+  }
+
+  if (conditions.length === 0) return { subquery: null, params: [] };
+
+  return {
+    subquery: `SELECT DISTINCT user_id FROM degrees WHERE ${conditions.join(" AND ")}`,
+    params,
+  };
+}
+
+// ── GET /api/analytics/skills-gap ─────────────────────────────────────────────
+
 router.get(
   "/analytics/skills-gap",
   requireApiKey,
@@ -84,122 +115,137 @@ router.get(
   }
 );
 
-/**
- * GET /api/analytics/employment-by-sector
- *
- * Groups employment_history by industry_sector and returns counts
- * sorted by count descending. Rows with no sector are labelled "Unknown".
- */
+// ── GET /api/analytics/employment-by-sector ───────────────────────────────────
+
 router.get(
   "/analytics/employment-by-sector",
   requireApiKey,
   requirePermission("read:analytics"),
-  async (_req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const { subquery, params } = buildCohortFilter(
+        req.query.programme    as string | undefined,
+        req.query.graduation_year as string | undefined
+      );
+
+      const whereClause = subquery ? `WHERE user_id IN (${subquery})` : "";
+
       const result = await query(
         `SELECT
            COALESCE(NULLIF(TRIM(industry_sector), ''), 'Unknown') AS sector,
            COUNT(*) AS count
          FROM employment_history
+         ${whereClause}
          GROUP BY COALESCE(NULLIF(TRIM(industry_sector), ''), 'Unknown')
          ORDER BY count DESC`,
-        []
+        params
       );
 
-      const data = result.rows.map((row) => ({
-        sector: row.sector as string,
-        count:  parseInt(row.count, 10),
-      }));
-
-      res.json(data);
+      res.json(
+        result.rows.map((row) => ({
+          sector: row.sector as string,
+          count:  parseInt(row.count, 10),
+        }))
+      );
     } catch (err) {
       next(err);
     }
   }
 );
 
-/**
- * GET /api/analytics/job-titles
- *
- * Groups employment_history by role, returns the top 15 most common
- * job titles sorted by count descending.
- */
+// ── GET /api/analytics/job-titles ─────────────────────────────────────────────
+
 router.get(
   "/analytics/job-titles",
   requireApiKey,
   requirePermission("read:analytics"),
-  async (_req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const { subquery, params } = buildCohortFilter(
+        req.query.programme    as string | undefined,
+        req.query.graduation_year as string | undefined
+      );
+
+      const whereClause = subquery ? `WHERE user_id IN (${subquery})` : "";
+
       const result = await query(
         `SELECT
            COALESCE(NULLIF(TRIM(role), ''), 'Unknown') AS role,
            COUNT(*) AS count
          FROM employment_history
+         ${whereClause}
          GROUP BY role
          ORDER BY count DESC
          LIMIT 15`,
-        []
+        params
       );
 
-      const data = result.rows.map((row) => ({
-        role:  row.role as string,
-        count: parseInt(row.count, 10),
-      }));
-
-      res.json(data);
+      res.json(
+        result.rows.map((row) => ({
+          role:  row.role as string,
+          count: parseInt(row.count, 10),
+        }))
+      );
     } catch (err) {
       next(err);
     }
   }
 );
 
-/**
- * GET /api/analytics/top-employers
- *
- * Groups employment_history by company, returns the top 10 most common
- * employers sorted by count descending.
- */
+// ── GET /api/analytics/top-employers ──────────────────────────────────────────
+
 router.get(
   "/analytics/top-employers",
   requireApiKey,
   requirePermission("read:analytics"),
-  async (_req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const { subquery, params } = buildCohortFilter(
+        req.query.programme    as string | undefined,
+        req.query.graduation_year as string | undefined
+      );
+
+      const whereClause = subquery ? `WHERE user_id IN (${subquery})` : "";
+
       const result = await query(
         `SELECT
            COALESCE(NULLIF(TRIM(company), ''), 'Unknown') AS company,
            COUNT(*) AS count
          FROM employment_history
+         ${whereClause}
          GROUP BY company
          ORDER BY count DESC
          LIMIT 10`,
-        []
+        params
       );
 
-      const data = result.rows.map((row) => ({
-        company: row.company as string,
-        count:   parseInt(row.count, 10),
-      }));
-
-      res.json(data);
+      res.json(
+        result.rows.map((row) => ({
+          company: row.company as string,
+          count:   parseInt(row.count, 10),
+        }))
+      );
     } catch (err) {
       next(err);
     }
   }
 );
 
-/**
- * GET /api/analytics/certification-trends
- *
- * Groups certifications by month (YYYY-MM) for the last 12 months,
- * returns array of {month, count} ordered by month ascending.
- */
+// ── GET /api/analytics/certification-trends ───────────────────────────────────
+
 router.get(
   "/analytics/certification-trends",
   requireApiKey,
   requirePermission("read:analytics"),
-  async (_req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
+  async (req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const { subquery, params } = buildCohortFilter(
+        req.query.programme    as string | undefined,
+        req.query.graduation_year as string | undefined
+      );
+
+      const userWhere = subquery ? `AND user_id IN (${subquery})` : "";
+
       const result = await query(
         `SELECT
            TO_CHAR(COALESCE(completed_at, CURRENT_DATE), 'YYYY-MM') AS month,
@@ -207,29 +253,65 @@ router.get(
          FROM certifications
          WHERE COALESCE(completed_at, CURRENT_DATE) >= DATE_TRUNC('month', NOW()) - INTERVAL '11 months'
            AND COALESCE(completed_at, CURRENT_DATE) <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
+           ${userWhere}
          GROUP BY month
          ORDER BY month ASC`,
-        []
+        params
       );
 
-      const data = result.rows.map((row) => ({
-        month: row.month as string,
-        count: parseInt(row.count, 10),
-      }));
-
-      res.json(data);
+      res.json(
+        result.rows.map((row) => ({
+          month: row.month as string,
+          count: parseInt(row.count, 10),
+        }))
+      );
     } catch (err) {
       next(err);
     }
   }
 );
 
-/**
- * GET /api/analytics/usage-stats
- *
- * Aggregates api_key_usage_logs joined with api_keys, grouped by api_key_id.
- * Returns array of {client_name, total_calls, last_accessed, unique_endpoints}.
- */
+// ── GET /api/analytics/geographic-distribution ────────────────────────────────
+
+router.get(
+  "/analytics/geographic-distribution",
+  requireApiKey,
+  requirePermission("read:analytics"),
+  async (req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { subquery, params } = buildCohortFilter(
+        req.query.programme    as string | undefined,
+        req.query.graduation_year as string | undefined
+      );
+
+      const cohortWhere = subquery ? `AND user_id IN (${subquery})` : "";
+
+      const result = await query(
+        `SELECT
+           COALESCE(NULLIF(TRIM(location), ''), 'Unknown') AS location,
+           COUNT(DISTINCT user_id) AS count
+         FROM employment_history
+         WHERE location IS NOT NULL AND TRIM(location) <> ''
+           ${cohortWhere}
+         GROUP BY location
+         ORDER BY count DESC`,
+        params
+      );
+
+      res.json(
+        result.rows.map((row) => ({
+          location: row.location as string,
+          count:    parseInt(row.count, 10),
+        }))
+      );
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /api/analytics/usage-stats ────────────────────────────────────────────
+
 router.get(
   "/analytics/usage-stats",
   requireApiKey,
@@ -249,24 +331,22 @@ router.get(
         []
       );
 
-      const data = result.rows.map((row) => ({
-        client_name:      row.client_name as string,
-        total_calls:      parseInt(row.total_calls, 10),
-        last_accessed:    row.last_accessed as string | null,
-        unique_endpoints: parseInt(row.unique_endpoints, 10),
-      }));
-
-      res.json(data);
+      res.json(
+        result.rows.map((row) => ({
+          client_name:      row.client_name as string,
+          total_calls:      parseInt(row.total_calls, 10),
+          last_accessed:    row.last_accessed as string | null,
+          unique_endpoints: parseInt(row.unique_endpoints, 10),
+        }))
+      );
     } catch (err) {
       next(err);
     }
   }
 );
 
-/**
- * GET /api/analytics/programme-list
- * Returns distinct degree programme titles — used to populate filter dropdowns.
- */
+// ── GET /api/analytics/programme-list ─────────────────────────────────────────
+
 router.get(
   "/analytics/programme-list",
   requireApiKey,
@@ -287,14 +367,30 @@ router.get(
   }
 );
 
-/**
- * GET /api/analytics/career-pathways
- *
- * Scenario 2 — Emerging Career Pathways.
- * ?programme= (optional): if given, returns {programme, total_alumni, sectors, roles}
- *   with counts and percentage of that cohort for each sector/role.
- * Without ?programme: returns summary of all programmes with their top sector & role.
- */
+// ── GET /api/analytics/graduation-years ───────────────────────────────────────
+
+router.get(
+  "/analytics/graduation-years",
+  requireApiKey,
+  requirePermission("read:analytics"),
+  async (_req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await query(
+        `SELECT DISTINCT EXTRACT(YEAR FROM completed_at)::int AS year
+         FROM degrees
+         WHERE completed_at IS NOT NULL
+         ORDER BY year DESC`,
+        []
+      );
+      res.json(result.rows.map((r) => r.year as number));
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ── GET /api/analytics/career-pathways ────────────────────────────────────────
+
 router.get(
   "/analytics/career-pathways",
   requireApiKey,
@@ -369,12 +465,14 @@ router.get(
            ORDER BY total_alumni DESC`,
           []
         );
-        res.json(result.rows.map((r) => ({
-          programme:    r.programme    as string,
-          total_alumni: parseInt(r.total_alumni, 10),
-          top_sector:   r.top_sector  as string | null,
-          top_role:     r.top_role    as string | null,
-        })));
+        res.json(
+          result.rows.map((r) => ({
+            programme:    r.programme    as string,
+            total_alumni: parseInt(r.total_alumni, 10),
+            top_sector:   r.top_sector  as string | null,
+            top_role:     r.top_role    as string | null,
+          }))
+        );
       }
     } catch (err) {
       next(err);
@@ -382,14 +480,8 @@ router.get(
   }
 );
 
-/**
- * GET /api/analytics/certification-growth
- *
- * Scenario 3 — Industry Demand Tracking.
- * Compares certification + professional_course counts for five predefined skill
- * categories between the current 6 months and the previous 6 months.
- * Returns growth_pct per category.
- */
+// ── GET /api/analytics/certification-growth ───────────────────────────────────
+
 router.get(
   "/analytics/certification-growth",
   requireApiKey,
@@ -397,11 +489,11 @@ router.get(
   async (_req: ApiKeyRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const categories = [
-        { name: "Cloud Computing",    keywords: ["AWS","Azure","GCP","Cloud"],                 pattern: "%(aws|azure|gcp|cloud)%" },
-        { name: "Agile & Scrum",      keywords: ["Agile","Scrum","Kanban"],                    pattern: "%(agile|scrum|kanban)%" },
-        { name: "DevOps & Containers",keywords: ["Docker","Kubernetes","DevOps","Terraform"],  pattern: "%(docker|kubernetes|devops|terraform|jenkins|ansible)%" },
-        { name: "Data & Analytics",   keywords: ["Python","Tableau","Data Science","ML"],      pattern: "%(python|tableau|data science|machine learning|spark|databricks)%" },
-        { name: "Cybersecurity",      keywords: ["Security","CISSP","CEH","CompTIA"],          pattern: "%(security|cissp|ceh|comptia|cyber|penetration)%" },
+        { name: "Cloud Computing",     keywords: ["AWS","Azure","GCP","Cloud"],                pattern: "%(aws|azure|gcp|cloud)%" },
+        { name: "Agile & Scrum",       keywords: ["Agile","Scrum","Kanban"],                   pattern: "%(agile|scrum|kanban)%" },
+        { name: "DevOps & Containers", keywords: ["Docker","Kubernetes","DevOps","Terraform"], pattern: "%(docker|kubernetes|devops|terraform|jenkins|ansible)%" },
+        { name: "Data & Analytics",    keywords: ["Python","Tableau","Data Science","ML"],     pattern: "%(python|tableau|data science|machine learning|spark|databricks)%" },
+        { name: "Cybersecurity",       keywords: ["Security","CISSP","CEH","CompTIA"],         pattern: "%(security|cissp|ceh|comptia|cyber|penetration)%" },
       ];
 
       const results = await Promise.all(

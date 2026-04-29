@@ -69,9 +69,14 @@
       <span class="up-breadcrumb-current">Certification Trends</span>
     </nav>
 
+    <%- include('../partials/filter-bar', {
+      filterAction: '/university/charts/certification-trends',
+      programmes, graduationYears, selectedProgramme, selectedYear
+    }) %>
+
     <div class="up-page-header-text">
       <h1>Certification Trends</h1>
-      <p>Monthly certification completions across all alumni over the past 12 months.</p>
+      <p>Monthly certification completions<% if (selectedProgramme) { %> for <strong><%= selectedProgramme %></strong><% } %><% if (selectedYear) { %> — class of <strong><%= selectedYear %></strong><% } %> over the past 12 months.</p>
     </div>
 
     <div class="up-stat-row">

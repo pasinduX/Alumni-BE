@@ -73,9 +73,14 @@
       <span class="up-breadcrumb-current">Skills Gap</span>
     </nav>
 
+    <%- include('../partials/filter-bar', {
+      filterAction: '/university/charts/skills-gap',
+      programmes, graduationYears, selectedProgramme, selectedYear
+    }) %>
+
     <div class="up-page-header-text">
       <h1>Skills Gap Analysis</h1>
-      <p>Top 20 certifications and professional courses completed by alumni in the past 12 months.</p>
+      <p>Top 20 certifications and professional courses completed by alumni<% if (selectedProgramme) { %> studying <strong><%= selectedProgramme %></strong><% } %><% if (selectedYear) { %> graduating in <strong><%= selectedYear %></strong><% } %>.</p>
     </div>
 
     <div class="up-chart-card">
